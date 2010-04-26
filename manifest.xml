@@ -1,0 +1,18 @@
+<package>
+  <description brief="ROSARIA">
+
+     ROSARIA
+
+  </description>
+  <author>Srećko Jurić-Kavelj</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+
+  <depend package="Aria"/>
+  <depend package="roscpp"/>
+  <depend package="nav_msgs"/>
+  <depend package="geometry_msgs"/>
+  <depend package="tf"/>
+</package>
+
+
