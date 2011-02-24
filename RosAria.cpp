@@ -88,6 +88,9 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
 
 RosAriaNode::~RosAriaNode()
 {
+  robot->stopRunning();
+  robot->waitForRunExit();
+  Aria::shutdown();
 }
 
 int RosAriaNode::Setup()
@@ -175,6 +178,8 @@ int main( int argc, char** argv )
   }
 
   node->spin();
+
+  delete node;
 
   printf( "\nQuitting... \n" );
   return 0;
