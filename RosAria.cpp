@@ -142,7 +142,8 @@ void RosAriaNode::publish()
   tf::poseTFToMsg(tf::Pose(tf::Quaternion(pos.getTh()*M_PI/180, 0, 0), tf::Vector3(pos.getX()/1000, pos.getY()/1000, 0)), position.pose.pose); //Aria returns pose in mm.
   position.twist.twist.linear.x = robot->getVel();
   position.twist.twist.angular.z = robot->getRotVel()*M_PI/180;
-
+  
+  position.header.frame_id = "/odometry_frame";
   position.header.stamp = ros::Time::now();
   pose_pub.publish(position);
   ROS_INFO("rcv: %f %f %f", position.header.stamp.toSec(), (double) position.twist.twist.linear.x, (double) position.twist.twist.angular.z);
