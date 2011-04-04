@@ -128,10 +128,7 @@ int RosAriaNode::Setup()
 
 void RosAriaNode::spin()
 {
-  while( n.ok() )
-  {
-    ros::spinOnce();
-  }
+  ros::spin();
 }
 
 void RosAriaNode::publish()
