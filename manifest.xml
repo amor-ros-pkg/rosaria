@@ -1,9 +1,11 @@
 <package>
   <description brief="ROS wrapper for MobileRobots' ARIA C++ library">
+
     <tt>ROSARIA</tt> is a ROS wrapper for MobileRobots' ARIA C++ library.
     This is a simple proof of concept package that lets you set velocity and
     read odometry data form MobileRobots (ActivMedia) platforms (e.g. Pioneer)
     using their official library.
+
   </description>
   <author>Srećko Jurić-Kavelj</author>
   <license>BSD</license>
