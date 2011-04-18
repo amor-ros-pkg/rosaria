@@ -7,6 +7,7 @@
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "nav_msgs/Odometry.h"
+#include "ROSARIA/BumperState.h"
 #include "tf/tf.h"
 #include "tf/transform_datatypes.h"
 
@@ -53,6 +54,7 @@ class RosAriaNode
   protected:
     ros::NodeHandle n;
     ros::Publisher pose_pub;
+    ros::Publisher bumpers_pub;
     ros::Subscriber cmdvel_sub;
 
     ros::Time veltime;
@@ -63,6 +65,7 @@ class RosAriaNode
     ArRobot *robot;
     ActionPause *pause;
     nav_msgs::Odometry position;
+    ROSARIA::BumperState bumpers;
     ArPose pos;
     ArFunctorC<RosAriaNode> myPublishCB;
 };
@@ -79,7 +82,8 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
 
   // advertise services
   pose_pub = n.advertise<nav_msgs::Odometry>("pose",1000);
-
+  bumpers_pub = n.advertise<ROSARIA::BumperState>("bumper_state",1000);
+  
   // subscribe to services
   cmdvel_sub = n.subscribe( "cmd_vel", 1, (boost::function < void(const geometry_msgs::TwistConstPtr&)>) boost::bind( &RosAriaNode::cmdvel_cb, this, _1 ));
   
@@ -123,6 +127,10 @@ int RosAriaNode::Setup()
 //  robot->addAction(pause, 10);
   robot->runAsync(true);
 
+  // Initialize bumpers with robot number of bumpers
+  bumpers.front_bumpers.resize(robot->getNumFrontBumpers());
+  bumpers.rear_bumpers.resize(robot->getNumRearBumpers());
+  
   return 0;
 }
 
@@ -144,6 +152,42 @@ void RosAriaNode::publish()
   position.header.stamp = ros::Time::now();
   pose_pub.publish(position);
   ROS_INFO("rcv: %f %f %f", position.header.stamp.toSec(), (double) position.twist.twist.linear.x, (double) position.twist.twist.angular.z);
+
+  // getStallValue returns 2 bytes with stall bit and bumper bits, packed as (00 00 FrontBumpers RearBumpers)
+  int stall = robot->getStallValue();
+  unsigned char front_bumpers = (unsigned char)(stall >> 8);
+  unsigned char rear_bumpers = (unsigned char)(stall);
+
+  bumpers.header.frame_id = "/bumpers_frame";
+  bumpers.header.stamp = ros::Time::now();
+
+  // Bit 0 is for stall, next bits are for bumpers (leftmost is LSB)
+  for (unsigned int i=0; i<robot->getNumFrontBumpers(); i++)
+  {
+    bumpers.front_bumpers[i] = (front_bumpers & (1 << (i+1))) == 0 ? 0 : 1;
+  }
+  
+  // Rear bumpers have reverse order (rightmost is LSB)
+  unsigned int numRearBumpers = robot->getNumRearBumpers();
+  for (unsigned int i=0; i<numRearBumpers; i++)
+  {
+    bumpers.rear_bumpers[i] = (rear_bumpers & (1 << (numRearBumpers-i))) == 0 ? 0 : 1;
+  }
+  
+  ROS_INFO( "Front bumpers: %d %d %d %d %d", front_bumpers & (1 << 1), 
+					                         front_bumpers & (1 << 2), 
+							                 front_bumpers & (1 << 3), 
+							                 front_bumpers & (1 << 4), 
+							                 front_bumpers & (1 << 5) );
+
+  ROS_INFO( "Rear bumpers: %d %d %d %d %d", rear_bumpers & (1 << 5), 
+					                         rear_bumpers & (1 << 4), 
+							                 rear_bumpers & (1 << 3), 
+							                 rear_bumpers & (1 << 2), 
+							                 rear_bumpers & (1 << 1) );
+
+  bumpers_pub.publish(bumpers);
+
   ros::Duration(1e-3).sleep();
 }
 
