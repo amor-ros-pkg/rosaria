@@ -11,6 +11,8 @@
 #include "tf/tf.h"
 #include "tf/transform_datatypes.h"
 
+#include <sstream>
+
 class ActionPause : public ArAction
 {
 public:
@@ -161,31 +163,25 @@ void RosAriaNode::publish()
   bumpers.header.frame_id = "/bumpers_frame";
   bumpers.header.stamp = ros::Time::now();
 
+  std::stringstream bumper_info(std::stringstream::out);
   // Bit 0 is for stall, next bits are for bumpers (leftmost is LSB)
   for (unsigned int i=0; i<robot->getNumFrontBumpers(); i++)
   {
     bumpers.front_bumpers[i] = (front_bumpers & (1 << (i+1))) == 0 ? 0 : 1;
+    bumper_info << " " << (front_bumpers & (1 << (i+1)));
   }
-  
+  ROS_INFO("Front bumpers:%s", bumper_info.str().c_str());
+
+  bumper_info.str("");
   // Rear bumpers have reverse order (rightmost is LSB)
   unsigned int numRearBumpers = robot->getNumRearBumpers();
   for (unsigned int i=0; i<numRearBumpers; i++)
   {
     bumpers.rear_bumpers[i] = (rear_bumpers & (1 << (numRearBumpers-i))) == 0 ? 0 : 1;
+    bumper_info << " " << (rear_bumpers & (1 << (numRearBumpers-i)));
   }
+  ROS_INFO("Rear bumpers:%s", bumper_info.str().c_str());
   
-  ROS_INFO( "Front bumpers: %d %d %d %d %d", front_bumpers & (1 << 1), 
-					                         front_bumpers & (1 << 2), 
-							                 front_bumpers & (1 << 3), 
-							                 front_bumpers & (1 << 4), 
-							                 front_bumpers & (1 << 5) );
-
-  ROS_INFO( "Rear bumpers: %d %d %d %d %d", rear_bumpers & (1 << 5), 
-					                         rear_bumpers & (1 << 4), 
-							                 rear_bumpers & (1 << 3), 
-							                 rear_bumpers & (1 << 2), 
-							                 rear_bumpers & (1 << 1) );
-
   bumpers_pub.publish(bumpers);
 
   ros::Duration(1e-3).sleep();
