@@ -9,6 +9,7 @@
 #include "nav_msgs/Odometry.h"
 #include "ROSARIA/BumperState.h"
 #include "tf/tf.h"
+#include "tf/transform_listener.h"	//for tf::getPrefixParam
 #include "tf/transform_datatypes.h"
 
 #include <sstream>
@@ -70,6 +71,11 @@ class RosAriaNode
     ROSARIA::BumperState bumpers;
     ArPose pos;
     ArFunctorC<RosAriaNode> myPublishCB;
+
+    //for resolving tf names.
+    std::string tf_prefix;
+    std::string frame_id_odom;
+    std::string frame_id_bumper;
 };
 
 RosAriaNode::RosAriaNode(ros::NodeHandle nh) : 
@@ -81,6 +87,20 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   // !!! port !!!
   n.param( "port", serial_port, std::string("/dev/ttyUSB0") );
   ROS_INFO( "using serial port: [%s]", serial_port.c_str() );
+
+  /*
+   * Figure out what frame_id's to use. if a tf_prefix param is specified,
+   * it will be added to the beginning of the frame_ids.
+   *
+   * e.g. rosrun ... _tf_prefix:=MyRobot (or equivalently using <param>s in
+   * roslaunch files)
+   * will result in the frame_ids being set to /MyRobot/odometry_frame etc,
+   * rather than /odometry_frame. This is useful for Multi Robot Systems.
+   * See ROS Wiki for further details.
+   */
+  tf_prefix = tf::getPrefixParam(n);
+  frame_id_odom = tf::resolve(tf_prefix, "odometry_frame");
+  frame_id_bumper = tf::resolve(tf_prefix, "bumpers_frame");
 
   // advertise services
   pose_pub = n.advertise<nav_msgs::Odometry>("pose",1000);
@@ -150,7 +170,7 @@ void RosAriaNode::publish()
   position.twist.twist.linear.x = robot->getVel()/1000; //Aria returns velocity in mm/s.
   position.twist.twist.angular.z = robot->getRotVel()*M_PI/180;
   
-  position.header.frame_id = "/odometry_frame";
+  position.header.frame_id = frame_id_odom;
   position.header.stamp = ros::Time::now();
   pose_pub.publish(position);
   ROS_INFO("rcv: %f %f %f", position.header.stamp.toSec(), (double) position.twist.twist.linear.x, (double) position.twist.twist.angular.z);
@@ -160,7 +180,7 @@ void RosAriaNode::publish()
   unsigned char front_bumpers = (unsigned char)(stall >> 8);
   unsigned char rear_bumpers = (unsigned char)(stall);
 
-  bumpers.header.frame_id = "/bumpers_frame";
+  bumpers.header.frame_id = frame_id_bumper;
   bumpers.header.stamp = ros::Time::now();
 
   std::stringstream bumper_info(std::stringstream::out);
