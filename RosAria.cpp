@@ -54,6 +54,7 @@ class RosAriaNode
     void cmdvel_cb( const geometry_msgs::TwistConstPtr &);
     void spin();
     void publish();
+    void sonarConnectCb();
 
   protected:
     ros::NodeHandle n;
@@ -81,13 +82,25 @@ class RosAriaNode
     std::string frame_id_sonar;
 
     //Sonar support
-    bool use_sonar;		//should sonars be used?
-    ArSonarDevice *sonar;
-    int numSonars;
+    bool use_sonar;		// enable and publish sonars
 };
 
+void RosAriaNode::sonarConnectCb()
+{
+  if (sonar_pub.getNumSubscribers() == 0)
+  {
+    robot->disableSonar();
+    use_sonar = false;
+  }
+  else
+  {
+    robot->enableSonar();
+    use_sonar = true;
+  }
+}
+
 RosAriaNode::RosAriaNode(ros::NodeHandle nh) : 
-  myPublishCB(this, &RosAriaNode::publish), numSonars(0)
+  myPublishCB(this, &RosAriaNode::publish), use_sonar(false)
 {
   // read in config options
   n = nh;
@@ -95,9 +108,6 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   // !!! port !!!
   n.param( "port", serial_port, std::string("/dev/ttyUSB0") );
   ROS_INFO( "using serial port: [%s]", serial_port.c_str() );
-
-  // Should sonar data be gathered and published?
-  n.param<bool>( "use_sonar", use_sonar, false);
 
   /*
    * Figure out what frame_id's to use. if a tf_prefix param is specified,
@@ -117,9 +127,8 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   // advertise services
   pose_pub = n.advertise<nav_msgs::Odometry>("pose",1000);
   bumpers_pub = n.advertise<ROSARIA::BumperState>("bumper_state",1000);
-  if (use_sonar) {
-    sonar_pub = n.advertise<sensor_msgs::PointCloud>("sonar", 50);
-  }
+  sonar_pub = n.advertise<sensor_msgs::PointCloud>("sonar", 50, boost::bind(&RosAriaNode::sonarConnectCb, this),
+    boost::bind(&RosAriaNode::sonarConnectCb, this));
   
   // subscribe to services
   cmdvel_sub = n.subscribe( "cmd_vel", 1, (boost::function < void(const geometry_msgs::TwistConstPtr&)>) boost::bind( &RosAriaNode::cmdvel_cb, this, _1 ));
@@ -131,7 +140,7 @@ RosAriaNode::~RosAriaNode()
 {
   //disable motors and sonar.
   robot->disableMotors();
-  robot->comInt(ArCommands::SONAR, 0);
+  robot->disableSonar();
 
   robot->stopRunning();
   robot->waitForRunExit();
@@ -163,16 +172,8 @@ int RosAriaNode::Setup()
   // Enable the motors
   robot->enableMotors();
 
-  //initialise sonar, if necessary.
-  ROS_INFO_STREAM("using sonars: " << (use_sonar ? "yes" : "no"));
-  if (use_sonar) {
-    robot->enableSonar();
-    sonar = new ArSonarDevice();
-    robot->addRangeDevice(sonar);
-  } else {
-    //robot->comInt(ArCommands::SONAR, 0);
-    robot->disableSonar();
-  }
+  // disable sonars on startup
+  robot->disableSonar();
 
   robot->addSensorInterpTask("PublishingTask", 100, &myPublishCB);
 //  robot->addAction(pause, 10);
@@ -182,18 +183,6 @@ int RosAriaNode::Setup()
   bumpers.front_bumpers.resize(robot->getNumFrontBumpers());
   bumpers.rear_bumpers.resize(robot->getNumRearBumpers());
 
-  /*
-   * Get number of sonars after sleeping for a short time.
-   * It appears that getNumSonar() does not work correctly if it is called
-   * straight away.
-   */
-  if (use_sonar) {
-      ros::Duration(0.5).sleep();
-      numSonars = robot->getNumSonar();
-      
-      ROS_INFO_STREAM("Found " << numSonars << " sonar sensors.");
-  }
-  
   return 0;
 }
 
@@ -256,12 +245,12 @@ void RosAriaNode::publish()
     
     std::stringstream sonar_debug_info;
     sonar_debug_info << "Sonar readings: ";
-    for (int i = 0; i < numSonars; i++) {
+    for (int i = 0; i < robot->getNumSonar(); i++) {
       ArSensorReading* reading = NULL;
       reading = robot->getSonarReading(i);
       if(!reading) {
-	ROS_WARN("Did not receive a sonar reading.");
-	continue;
+	      ROS_WARN("Did not receive a sonar reading.");
+	      continue;
       }
       
       //getRange() will return an integer between 0 and 5000 (5m)
@@ -280,10 +269,11 @@ void RosAriaNode::publish()
       //                  << sensor.getY() << ") ;; " ;
       
       //add to cloud
-      cloud.points.push_back(geometry_msgs::Point32());
-      cloud.points[i].x = reading->getLocalX() / 1000.0; //x&y swapped - see comment.
-      cloud.points[i].y = reading->getLocalY() / 1000.0;
-      cloud.points[i].z = 0; //will need to come from transfrom later.
+      geometry_msgs::Point32 p;
+      p.x = reading->getLocalX() / 1000.0;
+      p.y = reading->getLocalY() / 1000.0;
+      p.z = 0.0;
+      cloud.points.push_back(p);
     }
     ROS_DEBUG_STREAM(sonar_debug_info.str());
     
