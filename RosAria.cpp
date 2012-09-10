@@ -196,7 +196,7 @@ void RosAriaNode::publish()
 //  robot->lock();
   pos = robot->getPose();
 //  robot->unlock();
-  tf::poseTFToMsg(tf::Pose(tf::Quaternion(pos.getTh()*M_PI/180, 0, 0), tf::Vector3(pos.getX()/1000, pos.getY()/1000, 0)), position.pose.pose); //Aria returns pose in mm.
+  tf::poseTFToMsg(tf::Transform(tf::createQuaternionFromYaw(pos.getTh()*M_PI/180), tf::Vector3(pos.getX()/1000, pos.getY()/1000, 0)), position.pose.pose); //Aria returns pose in mm.
   position.twist.twist.linear.x = robot->getVel()/1000; //Aria returns velocity in mm/s.
   position.twist.twist.angular.z = robot->getRotVel()*M_PI/180;
   
