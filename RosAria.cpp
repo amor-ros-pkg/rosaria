@@ -107,7 +107,7 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
 
   // !!! port !!!
   n.param( "port", serial_port, std::string("/dev/ttyUSB0") );
-  ROS_INFO( "using serial port: [%s]", serial_port.c_str() );
+  ROS_INFO( "using port: [%s]", serial_port.c_str() );
 
   /*
    * Figure out what frame_id's to use. if a tf_prefix param is specified,
@@ -151,8 +151,21 @@ int RosAriaNode::Setup()
 {
   ArArgumentBuilder *args;
   args = new ArArgumentBuilder();
-  args->add("-rp"); //pass robot's serial port to Aria
-  args->add(serial_port.c_str());
+
+  size_t colon_pos = serial_port.find(":");
+  if (colon_pos != std::string::npos)
+  {
+    args->add("-rh"); //pass robot's hostname/IP address to Aria
+    args->add(serial_port.substr(0, colon_pos).c_str());
+    args->add("-rrtp"); //pass robot's TCP port to Aria
+    args->add(serial_port.substr(colon_pos+1).c_str());
+  }
+  else
+  {
+    args->add("-rp"); //pass robot's serial port to Aria
+    args->add(serial_port.c_str());
+  }
+  
   args->add("-rlpr"); //log received packets
   args->add("-rlps"); //log sent packets
   args->add("-rlvr"); //log received velocities
