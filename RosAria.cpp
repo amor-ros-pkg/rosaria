@@ -11,6 +11,7 @@
 #include "ROSARIA/BumperState.h"
 #include "tf/tf.h"
 #include "tf/transform_listener.h"	//for tf::getPrefixParam
+#include <tf/transform_broadcaster.h>
 #include "tf/transform_datatypes.h"
 
 #include <sstream>
@@ -62,7 +63,7 @@ class RosAriaNode
     ros::Publisher bumpers_pub;
     ros::Publisher sonar_pub;
     ros::Subscriber cmdvel_sub;
-
+		
     ros::Time veltime;
 
     std::string serial_port;
@@ -74,10 +75,14 @@ class RosAriaNode
     ROSARIA::BumperState bumpers;
     ArPose pos;
     ArFunctorC<RosAriaNode> myPublishCB;
-
+		
+		//for odom->base_link transform
+		tf::TransformBroadcaster odom_broadcaster;
+		geometry_msgs::TransformStamped odom_trans;
     //for resolving tf names.
     std::string tf_prefix;
     std::string frame_id_odom;
+    std::string frame_id_base_link;
     std::string frame_id_bumper;
     std::string frame_id_sonar;
 
@@ -115,12 +120,13 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
    *
    * e.g. rosrun ... _tf_prefix:=MyRobot (or equivalently using <param>s in
    * roslaunch files)
-   * will result in the frame_ids being set to /MyRobot/odometry_frame etc,
-   * rather than /odometry_frame. This is useful for Multi Robot Systems.
+   * will result in the frame_ids being set to /MyRobot/odom etc,
+   * rather than /odom. This is useful for Multi Robot Systems.
    * See ROS Wiki for further details.
    */
   tf_prefix = tf::getPrefixParam(n);
-  frame_id_odom = tf::resolve(tf_prefix, "odometry_frame");
+  frame_id_odom = tf::resolve(tf_prefix, "odom");
+  frame_id_base_link = tf::resolve(tf_prefix, "base_link");
   frame_id_bumper = tf::resolve(tf_prefix, "bumpers_frame");
   frame_id_sonar = tf::resolve(tf_prefix, "sonar_frame");
 
@@ -214,10 +220,23 @@ void RosAriaNode::publish()
   position.twist.twist.angular.z = robot->getRotVel()*M_PI/180;
   
   position.header.frame_id = frame_id_odom;
+  position.child_frame_id = frame_id_base_link;
   position.header.stamp = ros::Time::now();
   pose_pub.publish(position);
   ROS_INFO("rcv: %f %f %f", position.header.stamp.toSec(), (double) position.twist.twist.linear.x, (double) position.twist.twist.angular.z);
-
+	
+	// publishing transform odom->base_link
+	odom_trans.header.stamp = ros::Time::now();
+	odom_trans.header.frame_id = frame_id_odom;
+	odom_trans.child_frame_id = frame_id_base_link;
+	
+	odom_trans.transform.translation.x = pos.getX()/1000;
+	odom_trans.transform.translation.y = pos.getY()/1000;
+	odom_trans.transform.translation.z = 0.0;
+	odom_trans.transform.rotation = tf::createQuaternionMsgFromYaw(pos.getTh()*M_PI/180);
+	
+	odom_broadcaster.sendTransform(odom_trans);
+	
   // getStallValue returns 2 bytes with stall bit and bumper bits, packed as (00 00 FrontBumpers RearBumpers)
   int stall = robot->getStallValue();
   unsigned char front_bumpers = (unsigned char)(stall >> 8);
