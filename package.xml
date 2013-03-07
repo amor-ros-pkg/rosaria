@@ -1,0 +1,36 @@
+<package>
+  <name>ROSARIA</name>
+  <version>groovy</version>
+  <description></description>
+  <!-- <maintainer>Srecko Juric-Kavelj</maintainer> -->
+
+  <license>BSD</license>
+
+  <url type="website">http://www.ros.org/wiki/ROSARIA</url>
+  <!-- <url type="bugtracker"></url> -->
+
+  <author>Srecko Juric-Kavelj</author>
+
+  <!-- <build_depend>Aria</build_depend> -->
+  <!-- <build_depend>roscpp</build_depend> -->
+  <!-- <build_depend>nav_msgs</build_depend> -->
+  <!-- <build_depend>geometry_msgs</build_depend> -->
+  <!-- <build_depend>sensor_msgs</build_depend> -->
+  <!-- <build_depend>tf</build_depend> -->
+  <!-- <run_depend>Aria</run_depend> -->
+  <!-- <run_depend>roscpp</run_depend> -->
+  <!-- <run_depend>nav_msgs</run_depend> -->
+  <!-- <run_depend>geometry_msgs</run_depend> -->
+  <!-- <run_depend>sensor_msgs</run_depend> -->
+  <!-- <run_depend>tf</run_depend> -->
+  <!-- <test_depend>Aria</test_depend> -->
+  <!-- <test_depend>roscpp</test_depend> -->
+  <!-- <test_depend>nav_msgs</test_depend> -->
+  <!-- <test_depend>geometry_msgs</test_depend> -->
+  <!-- <test_depend>sensor_msgs</test_depend> -->
+  <!-- <test_depend>tf</test_depend> -->
+
+  <export>
+
+  </export>
+</package>
