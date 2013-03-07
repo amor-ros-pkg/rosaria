@@ -1,8 +1,14 @@
 <package>
   <name>ROSARIA</name>
-  <version>groovy</version>
-  <description></description>
-  <!-- <maintainer>Srecko Juric-Kavelj</maintainer> -->
+  <version>0.9.0</version>
+  <description>
+    <tt>ROSARIA</tt> is a ROS wrapper for MobileRobots' ARIA C++ library.
+    This is a simple proof of concept package that lets you set velocity and
+    read odometry data form MobileRobots (ActivMedia) platforms (e.g. Pioneer)
+    using their official library.
+  </description>
+  <maintainer email="srecko.juric-kavelj@fer.hr">Srecko Juric-Kavelj</maintainer>
+  <maintainer email="ivan.markovic@fer.hr">Ivan Markovic</maintainer>
 
   <license>BSD</license>
 
@@ -11,24 +17,27 @@
 
   <author>Srecko Juric-Kavelj</author>
 
-  <!-- <build_depend>Aria</build_depend> -->
-  <!-- <build_depend>roscpp</build_depend> -->
-  <!-- <build_depend>nav_msgs</build_depend> -->
-  <!-- <build_depend>geometry_msgs</build_depend> -->
-  <!-- <build_depend>sensor_msgs</build_depend> -->
-  <!-- <build_depend>tf</build_depend> -->
-  <!-- <run_depend>Aria</run_depend> -->
-  <!-- <run_depend>roscpp</run_depend> -->
-  <!-- <run_depend>nav_msgs</run_depend> -->
-  <!-- <run_depend>geometry_msgs</run_depend> -->
-  <!-- <run_depend>sensor_msgs</run_depend> -->
-  <!-- <run_depend>tf</run_depend> -->
-  <!-- <test_depend>Aria</test_depend> -->
-  <!-- <test_depend>roscpp</test_depend> -->
-  <!-- <test_depend>nav_msgs</test_depend> -->
-  <!-- <test_depend>geometry_msgs</test_depend> -->
-  <!-- <test_depend>sensor_msgs</test_depend> -->
-  <!-- <test_depend>tf</test_depend> -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>message_generation</build_depend>
+  <build_depend>libaria</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>tf</build_depend>
+  <run_depend>libaria</run_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>nav_msgs</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>tf</run_depend>
+  <!-- <test_depend>Aria</test_depend>
+  <test_depend>roscpp</test_depend>
+  <test_depend>nav_msgs</test_depend>
+  <test_depend>geometry_msgs</test_depend>
+  <test_depend>sensor_msgs</test_depend>
+  <test_depend>tf</test_depend> -->
 
   <export>
 
