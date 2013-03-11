@@ -7,10 +7,10 @@
     read odometry data form MobileRobots (ActivMedia) platforms (e.g. Pioneer)
     using their official library.
   </description>
-  <maintainer email="srecko.juric-kavelj@fer.hr">Srecko Juric-Kavelj</maintainer>
-  <maintainer email="ivan.markovic@fer.hr">Ivan Markovic</maintainer>
+  <maintainer email="srecko.juric-kavelj@fer.hr">Srećko Jurić-Kavelj</maintainer>
+  <maintainer email="ivan.markovic@fer.hr">Ivan Marković</maintainer>
 
-  <license>BSD</license>
+  <license>GPLv2</license>
 
   <url type="website">http://www.ros.org/wiki/ROSARIA</url>
   <!-- <url type="bugtracker"></url> -->
