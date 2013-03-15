@@ -39,7 +39,7 @@ link_directories(/usr/local/Aria/lib)
 add_executable(RosAria RosAria.cpp)
 target_link_libraries(RosAria ${catkin_LIBRARIES} ${Boost_LIBRARIES} Aria pthread dl rt)
 set_target_properties(RosAria PROPERTIES COMPILE_FLAGS "-fPIC")
-set_target_properties(RosAria PROPERTIES LINK_FLAGS "-Wl")
+#set_target_properties(RosAria PROPERTIES LINK_FLAGS "-Wl")
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
