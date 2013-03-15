@@ -2,10 +2,15 @@
   <name>ROSARIA</name>
   <version>0.9.0</version>
   <description>
-    <tt>ROSARIA</tt> is a ROS wrapper for MobileRobots' ARIA C++ library.
-    This is a simple proof of concept package that lets you set velocity and
-    read odometry data form MobileRobots (ActivMedia) platforms (e.g. Pioneer)
-    using their official library.
+    <tt>ROSARIA</tt> provides a ROS interface for most Adept MobileRobots, 
+    MobileRobots Inc., and ActivMedia mobile robot bases including
+    Pioneer 2, Pioneer 3, AmigoBot, PeopleBot, PowerBot, PatrolBot, Seekur, Seekur Jr.,
+    and any other past, current or future robot base supported by Adept MobileRobot's 
+    open source ARIA library. 
+    Information from the robot base, and velocity and acceleration control, is implemented
+    via a <tt>RosAria</tt> node, which publishes topics providing data recieved from
+    the robot's embedded controller by ARIA, and sets desired velocity, acceleration and 
+    other commands in ARIA when new commands are received from command topics.
   </description>
   <maintainer email="srecko.juric-kavelj@fer.hr">Srećko Jurić-Kavelj</maintainer>
   <maintainer email="ivan.markovic@fer.hr">Ivan Marković</maintainer>
@@ -13,9 +18,9 @@
   <license>GPLv2</license>
 
   <url type="website">http://www.ros.org/wiki/ROSARIA</url>
-  <!-- <url type="bugtracker"></url> -->
+  <url type="bugtracker">https://code.google.com/p/amor-ros-pkg/issues/list</url> 
 
-  <author>Srecko Juric-Kavelj</author>
+  <author>Srećko Jurić-Kavelj</author>
 
   <buildtool_depend>catkin</buildtool_depend>
 

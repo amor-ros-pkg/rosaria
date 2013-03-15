@@ -6,11 +6,11 @@
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/PoseStamped.h"
-#include <sensor_msgs/PointCloud.h>     //for sonar data
+#include <sensor_msgs/PointCloud.h>  //for sonar data
 #include "nav_msgs/Odometry.h"
 #include "ROSARIA/BumperState.h"
 #include "tf/tf.h"
-#include "tf/transform_listener.h"	//for tf::getPrefixParam
+#include "tf/transform_listener.h"  //for tf::getPrefixParam
 #include <tf/transform_broadcaster.h>
 #include "tf/transform_datatypes.h"
 
@@ -44,6 +44,10 @@ ArActionDesired *ActionPause::fire(ArActionDesired currentDesired)
 }
 
 
+// Node that interfaces between ROS and mobile robot base features via ARIA library. 
+//
+// RosAria uses the roscpp client library, see http://www.ros.org/wiki/roscpp for
+// information, tutorials and documentation.
 class RosAriaNode
 {
   public:
@@ -114,37 +118,40 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   n.param( "port", serial_port, std::string("/dev/ttyUSB0") );
   ROS_INFO( "using port: [%s]", serial_port.c_str() );
 
-  /*
-   * Figure out what frame_id's to use. if a tf_prefix param is specified,
-   * it will be added to the beginning of the frame_ids.
-   *
-   * e.g. rosrun ... _tf_prefix:=MyRobot (or equivalently using <param>s in
-   * roslaunch files)
-   * will result in the frame_ids being set to /MyRobot/odom etc,
-   * rather than /odom. This is useful for Multi Robot Systems.
-   * See ROS Wiki for further details.
-   */
+  // Figure out what frame_id's to use. if a tf_prefix param is specified,
+  // it will be added to the beginning of the frame_ids.
+  //
+  // e.g. rosrun ... _tf_prefix:=MyRobot (or equivalently using <param>s in
+  // roslaunch files)
+  // will result in the frame_ids being set to /MyRobot/odom etc,
+  // rather than /odom. This is useful for Multi Robot Systems.
+  // See ROS Wiki for further details.
   tf_prefix = tf::getPrefixParam(n);
   frame_id_odom = tf::resolve(tf_prefix, "odom");
   frame_id_base_link = tf::resolve(tf_prefix, "base_link");
   frame_id_bumper = tf::resolve(tf_prefix, "bumpers_frame");
   frame_id_sonar = tf::resolve(tf_prefix, "sonar_frame");
 
-  // advertise services
+  // advertise services for data topics
+  // second argument to advertise() is queue size.
+  // other argmuments (optional) are callbacks, or a boolean "latch" flag (whether to send current data to new
+  // subscribers when they subscribe).
+  // See ros::NodeHandle API docs.
   pose_pub = n.advertise<nav_msgs::Odometry>("pose",1000);
   bumpers_pub = n.advertise<ROSARIA::BumperState>("bumper_state",1000);
   sonar_pub = n.advertise<sensor_msgs::PointCloud>("sonar", 50, boost::bind(&RosAriaNode::sonarConnectCb, this),
     boost::bind(&RosAriaNode::sonarConnectCb, this));
   
   // subscribe to services
-  cmdvel_sub = n.subscribe( "cmd_vel", 1, (boost::function < void(const geometry_msgs::TwistConstPtr&)>) boost::bind( &RosAriaNode::cmdvel_cb, this, _1 ));
+  cmdvel_sub = n.subscribe( "cmd_vel", 1, (boost::function <void(const geometry_msgs::TwistConstPtr&)>)
+    boost::bind(&RosAriaNode::cmdvel_cb, this, _1 ));
   
   veltime = ros::Time::now();
 }
 
 RosAriaNode::~RosAriaNode()
 {
-  //disable motors and sonar.
+  // disable motors and sonar.
   robot->disableMotors();
   robot->disableSonar();
 
@@ -161,20 +168,20 @@ int RosAriaNode::Setup()
   size_t colon_pos = serial_port.find(":");
   if (colon_pos != std::string::npos)
   {
-    args->add("-rh"); //pass robot's hostname/IP address to Aria
+    args->add("-rh"); // pass robot's hostname/IP address to Aria
     args->add(serial_port.substr(0, colon_pos).c_str());
-    args->add("-rrtp"); //pass robot's TCP port to Aria
+    args->add("-rrtp"); // pass robot's TCP port to Aria
     args->add(serial_port.substr(colon_pos+1).c_str());
   }
   else
   {
-    args->add("-rp"); //pass robot's serial port to Aria
+    args->add("-rp"); // pass robot's serial port to Aria
     args->add(serial_port.c_str());
   }
   
-  args->add("-rlpr"); //log received packets
-  args->add("-rlps"); //log sent packets
-  args->add("-rlvr"); //log received velocities
+  args->add("-rlpr"); // log received packets
+  args->add("-rlps"); // log sent packets
+  args->add("-rlvr"); // log received velocities
   conn = new ArSimpleConnector(args);
 
   robot = new ArRobot();
@@ -266,15 +273,15 @@ void RosAriaNode::publish()
   
   bumpers_pub.publish(bumpers);
 
-  /*
-   * Publish sonar information, if necessary.
-   */
+  // Publish sonar information, if necessary.
   if (use_sonar) {
     sensor_msgs::PointCloud cloud;	//sonar readings.
     cloud.header.stamp = position.header.stamp;	//copy time.
-    //sonar sensors relative to base_link
+    // sonar sensors relative to base_link
     cloud.header.frame_id = frame_id_sonar;
     
+
+    // Log debugging info
     std::stringstream sonar_debug_info;
     sonar_debug_info << "Sonar readings: ";
     for (int i = 0; i < robot->getNumSonar(); i++) {
@@ -285,15 +292,14 @@ void RosAriaNode::publish()
         continue;
       }
       
-      //getRange() will return an integer between 0 and 5000 (5m)
+      // getRange() will return an integer between 0 and 5000 (5m)
       sonar_debug_info << reading->getRange() << " ";
 
-      /*
-       * local (x,y). Appears to be from the centre of the robot, since values may
-       * exceed 5000. This is good, since it means we only need 1 transform.
-       * x & y seem to be swapped though, i.e. if the robot is driving north
-       * x is north/south and y is east/west.
-       */
+      // local (x,y). Appears to be from the centre of the robot, since values may
+      // exceed 5000. This is good, since it means we only need 1 transform.
+      // x & y seem to be swapped though, i.e. if the robot is driving north
+      // x is north/south and y is east/west.
+      //
       //ArPose sensor = reading->getSensorPosition();	//position of sensor.
       // sonar_debug_info << "(" << reading->getLocalX() 
       //                  << ", " << reading->getLocalY()
