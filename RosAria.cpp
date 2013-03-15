@@ -63,7 +63,7 @@ class RosAriaNode
     ros::Publisher bumpers_pub;
     ros::Publisher sonar_pub;
     ros::Subscriber cmdvel_sub;
-		
+
     ros::Time veltime;
 
     std::string serial_port;
@@ -75,10 +75,10 @@ class RosAriaNode
     ROSARIA::BumperState bumpers;
     ArPose pos;
     ArFunctorC<RosAriaNode> myPublishCB;
-		
-		//for odom->base_link transform
-		tf::TransformBroadcaster odom_broadcaster;
-		geometry_msgs::TransformStamped odom_trans;
+
+    //for odom->base_link transform
+    tf::TransformBroadcaster odom_broadcaster;
+    geometry_msgs::TransformStamped odom_trans;
     //for resolving tf names.
     std::string tf_prefix;
     std::string frame_id_odom;
@@ -87,7 +87,7 @@ class RosAriaNode
     std::string frame_id_sonar;
 
     //Sonar support
-    bool use_sonar;		// enable and publish sonars
+    bool use_sonar;  // enable and publish sonars
 };
 
 void RosAriaNode::sonarConnectCb()
@@ -224,19 +224,19 @@ void RosAriaNode::publish()
   position.header.stamp = ros::Time::now();
   pose_pub.publish(position);
   ROS_INFO("rcv: %f %f %f", position.header.stamp.toSec(), (double) position.twist.twist.linear.x, (double) position.twist.twist.angular.z);
-	
-	// publishing transform odom->base_link
-	odom_trans.header.stamp = ros::Time::now();
-	odom_trans.header.frame_id = frame_id_odom;
-	odom_trans.child_frame_id = frame_id_base_link;
-	
-	odom_trans.transform.translation.x = pos.getX()/1000;
-	odom_trans.transform.translation.y = pos.getY()/1000;
-	odom_trans.transform.translation.z = 0.0;
-	odom_trans.transform.rotation = tf::createQuaternionMsgFromYaw(pos.getTh()*M_PI/180);
-	
-	odom_broadcaster.sendTransform(odom_trans);
-	
+
+  // publishing transform odom->base_link
+  odom_trans.header.stamp = ros::Time::now();
+  odom_trans.header.frame_id = frame_id_odom;
+  odom_trans.child_frame_id = frame_id_base_link;
+  
+  odom_trans.transform.translation.x = pos.getX()/1000;
+  odom_trans.transform.translation.y = pos.getY()/1000;
+  odom_trans.transform.translation.z = 0.0;
+  odom_trans.transform.rotation = tf::createQuaternionMsgFromYaw(pos.getTh()*M_PI/180);
+  
+  odom_broadcaster.sendTransform(odom_trans);
+  
   // getStallValue returns 2 bytes with stall bit and bumper bits, packed as (00 00 FrontBumpers RearBumpers)
   int stall = robot->getStallValue();
   unsigned char front_bumpers = (unsigned char)(stall >> 8);
@@ -281,8 +281,8 @@ void RosAriaNode::publish()
       ArSensorReading* reading = NULL;
       reading = robot->getSonarReading(i);
       if(!reading) {
-	      ROS_WARN("Did not receive a sonar reading.");
-	      continue;
+        ROS_WARN("Did not receive a sonar reading.");
+        continue;
       }
       
       //getRange() will return an integer between 0 and 5000 (5m)
