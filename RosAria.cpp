@@ -92,6 +92,10 @@ class RosAriaNode
 
     //Sonar support
     bool use_sonar;  // enable and publish sonars
+
+    // Debug Aria
+    bool debug_aria;
+    std::string aria_log_filename;
 };
 
 void RosAriaNode::sonarConnectCb()
@@ -116,7 +120,11 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
 
   // !!! port !!!
   n.param( "port", serial_port, std::string("/dev/ttyUSB0") );
-  ROS_INFO( "using port: [%s]", serial_port.c_str() );
+  ROS_INFO( "RosAria: using port: [%s]", serial_port.c_str() );
+
+  // handle debugging more elegantly
+  n.param( "debug_aria", debug_aria, false ); // default not to debug
+  n.param( "aria_log_filename", aria_log_filename, std::string("Aria.log") );
 
   // Figure out what frame_id's to use. if a tf_prefix param is specified,
   // it will be added to the beginning of the frame_ids.
@@ -179,19 +187,21 @@ int RosAriaNode::Setup()
     args->add(serial_port.c_str());
   }
   
-  args->add("-rlpr"); // log received packets
-  args->add("-rlps"); // log sent packets
-  args->add("-rlvr"); // log received velocities
+  if( debug_aria )
+  {
+    args->add("-rlpr"); // log received packets
+    args->add("-rlps"); // log sent packets
+    args->add("-rlvr"); // log received velocities
+    ArLog::init(ArLog::File, ArLog::Verbose, aria_log_filename.c_str(), true);
+  }
   conn = new ArSimpleConnector(args);
 
   robot = new ArRobot();
   pause = new ActionPause(4e-3);
 
-  ArLog::init(ArLog::File, ArLog::Verbose, "aria.log", true);
-
   // Connect to the robot
   if (!conn->connectRobot(robot)) {
-    ArLog::log(ArLog::Terse, "rotate: Could not connect to robot! Exiting.");
+    ROS_ERROR("RosAria: ARIA could not connect to robot!");
     return 1;
   }
 
@@ -222,7 +232,8 @@ void RosAriaNode::publish()
 //  robot->lock();
   pos = robot->getPose();
 //  robot->unlock();
-  tf::poseTFToMsg(tf::Transform(tf::createQuaternionFromYaw(pos.getTh()*M_PI/180), tf::Vector3(pos.getX()/1000, pos.getY()/1000, 0)), position.pose.pose); //Aria returns pose in mm.
+  tf::poseTFToMsg(tf::Transform(tf::createQuaternionFromYaw(pos.getTh()*M_PI/180), tf::Vector3(pos.getX()/1000,
+    pos.getY()/1000, 0)), position.pose.pose); //Aria returns pose in mm.
   position.twist.twist.linear.x = robot->getVel()/1000; //Aria returns velocity in mm/s.
   position.twist.twist.angular.z = robot->getRotVel()*M_PI/180;
   
@@ -230,7 +241,8 @@ void RosAriaNode::publish()
   position.child_frame_id = frame_id_base_link;
   position.header.stamp = ros::Time::now();
   pose_pub.publish(position);
-  ROS_INFO("rcv: %f %f %f", position.header.stamp.toSec(), (double) position.twist.twist.linear.x, (double) position.twist.twist.angular.z);
+  ROS_DEBUG("RosAria: rcv: %f %f %f", position.header.stamp.toSec(), (double) position.twist.twist.linear.x,
+    (double) position.twist.twist.angular.z);
 
   // publishing transform odom->base_link
   odom_trans.header.stamp = ros::Time::now();
@@ -259,7 +271,7 @@ void RosAriaNode::publish()
     bumpers.front_bumpers[i] = (front_bumpers & (1 << (i+1))) == 0 ? 0 : 1;
     bumper_info << " " << (front_bumpers & (1 << (i+1)));
   }
-  ROS_INFO("Front bumpers:%s", bumper_info.str().c_str());
+  ROS_DEBUG("RosAria: Front bumpers:%s", bumper_info.str().c_str());
 
   bumper_info.str("");
   // Rear bumpers have reverse order (rightmost is LSB)
@@ -269,7 +281,7 @@ void RosAriaNode::publish()
     bumpers.rear_bumpers[i] = (rear_bumpers & (1 << (numRearBumpers-i))) == 0 ? 0 : 1;
     bumper_info << " " << (rear_bumpers & (1 << (numRearBumpers-i)));
   }
-  ROS_INFO("Rear bumpers:%s", bumper_info.str().c_str());
+  ROS_DEBUG("RosAria: Rear bumpers:%s", bumper_info.str().c_str());
   
   bumpers_pub.publish(bumpers);
 
@@ -288,7 +300,7 @@ void RosAriaNode::publish()
       ArSensorReading* reading = NULL;
       reading = robot->getSonarReading(i);
       if(!reading) {
-        ROS_WARN("Did not receive a sonar reading.");
+        ROS_WARN("RosAria: Did not receive a sonar reading.");
         continue;
       }
       
@@ -300,13 +312,13 @@ void RosAriaNode::publish()
       // x & y seem to be swapped though, i.e. if the robot is driving north
       // x is north/south and y is east/west.
       //
-      //ArPose sensor = reading->getSensorPosition();	//position of sensor.
+      //ArPose sensor = reading->getSensorPosition();  //position of sensor.
       // sonar_debug_info << "(" << reading->getLocalX() 
       //                  << ", " << reading->getLocalY()
       //                  << ") from (" << sensor.getX() << ", " 
       //                  << sensor.getY() << ") ;; " ;
       
-      //add to cloud
+      //add sonar readings (robot-local coordinate frame) to cloud
       geometry_msgs::Point32 p;
       p.x = reading->getLocalX() / 1000.0;
       p.y = reading->getLocalY() / 1000.0;
@@ -331,7 +343,8 @@ RosAriaNode::cmdvel_cb( const geometry_msgs::TwistConstPtr &msg)
   robot->setVel(msg->linear.x*1e3);
   robot->setRotVel(msg->angular.z*180/M_PI);
 //  robot->unlock();
-  ROS_INFO("snd: %f %f %f", veltime.toSec(), (double) msg->linear.x, (double) msg->angular.z);
+  ROS_DEBUG("RosAria: sent vels to to aria (time %f): x vel %f mm/s, y vel %f mm/s, ang vel %f deg/s", veltime.toSec(),
+    (double) msg->linear.x * 1e3, (double) msg->linear.y * 1.3, (double) msg->angular.z * 180/M_PI);
 }
 
 
@@ -345,7 +358,7 @@ int main( int argc, char** argv )
 
   if( node->Setup() != 0 )
   {
-    printf( "setup failed... \n" );
+    ROS_FATAL( "RosAria: ROS node setup failed... \n" );
     return -1;
   }
 
@@ -353,7 +366,7 @@ int main( int argc, char** argv )
 
   delete node;
 
-  printf( "\nQuitting... \n" );
+  ROS_INFO( "RosAria: Quitting... \n" );
   return 0;
   
 }
