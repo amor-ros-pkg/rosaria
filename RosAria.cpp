@@ -13,6 +13,8 @@
 #include "tf/transform_listener.h"  //for tf::getPrefixParam
 #include <tf/transform_broadcaster.h>
 #include "tf/transform_datatypes.h"
+#include <dynamic_reconfigure/server.h>
+#include <ROSARIA/AccelerationsConfig.h>
 
 #include <sstream>
 
@@ -60,6 +62,7 @@ class RosAriaNode
     void spin();
     void publish();
     void sonarConnectCb();
+    void accelerations_reconfigure_callback(ROSARIA::AccelerationsConfig &config, uint32_t level);
 
   protected:
     ros::NodeHandle n;
@@ -96,7 +99,28 @@ class RosAriaNode
     // Debug Aria
     bool debug_aria;
     std::string aria_log_filename;
+    
+    // dynamic_reconfigure
+    dynamic_reconfigure::Server<ROSARIA::AccelerationsConfig> accel_server;
 };
+
+void RosAriaNode::accelerations_reconfigure_callback(ROSARIA::AccelerationsConfig &config, uint32_t level)
+{
+  ROS_INFO("RosAria: Accelerations reconfigure request:\n"
+           "  Translational accel: %f, decel: %f\n"
+           "  Lateral accel: %f, decel: %f\n"
+           "  Rotational accel: %f, decel: %f",
+           config.trans_accel, config.trans_decel,
+           config.lat_accel, config.lat_decel,
+           config.rot_accel, config.rot_decel);
+  
+  this->robot->setTransAccel(config.trans_accel);
+  this->robot->setTransDecel(config.trans_decel);
+  this->robot->setLatAccel(config.lat_accel);
+  this->robot->setLatDecel(config.lat_decel);
+  this->robot->setRotAccel(config.rot_accel);
+  this->robot->setRotDecel(config.rot_decel);
+}
 
 void RosAriaNode::sonarConnectCb()
 {
@@ -204,6 +228,19 @@ int RosAriaNode::Setup()
     ROS_ERROR("RosAria: ARIA could not connect to robot!");
     return 1;
   }
+
+  // start dynamic_reconfigure server for accelerations
+  ROSARIA::AccelerationsConfig accels_max;
+  accels_max.trans_accel = robot->getAbsoluteMaxTransAccel();
+  accels_max.trans_decel = robot->getAbsoluteMaxTransDecel();
+  // TODO: Fix rqt dynamic_reconfigure gui to handle empty intervals
+  // Until then, set unit length interval.
+  accels_max.lat_accel = (robot->getAbsoluteMaxLatAccel() > 0.0) ? robot->getAbsoluteMaxLatAccel() : 1.0;
+  accels_max.lat_decel = (robot->getAbsoluteMaxLatDecel() > 0.0) ? robot->getAbsoluteMaxLatDecel() : 1.0;
+  accels_max.rot_accel = robot->getAbsoluteMaxRotAccel();
+  accels_max.rot_decel = robot->getAbsoluteMaxRotDecel();
+  accel_server.setConfigMax(accels_max);
+  accel_server.setCallback(boost::bind(&RosAriaNode::accelerations_reconfigure_callback, this, _1, _2));
 
   // Enable the motors
   robot->enableMotors();
