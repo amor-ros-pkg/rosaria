@@ -114,12 +114,12 @@ void RosAriaNode::accelerations_reconfigure_callback(ROSARIA::AccelerationsConfi
            config.lat_accel, config.lat_decel,
            config.rot_accel, config.rot_decel);
   
-  this->robot->setTransAccel(config.trans_accel);
-  this->robot->setTransDecel(config.trans_decel);
-  this->robot->setLatAccel(config.lat_accel);
-  this->robot->setLatDecel(config.lat_decel);
-  this->robot->setRotAccel(config.rot_accel);
-  this->robot->setRotDecel(config.rot_decel);
+  this->robot->setTransAccel(config.trans_accel*1000);
+  this->robot->setTransDecel(config.trans_decel*1000);
+  this->robot->setLatAccel(config.lat_accel*1000);
+  this->robot->setLatDecel(config.lat_decel*1000);
+  this->robot->setRotAccel(config.rot_accel*180/M_PI);
+  this->robot->setRotDecel(config.rot_decel*180/M_PI);
 }
 
 void RosAriaNode::sonarConnectCb()
@@ -231,14 +231,14 @@ int RosAriaNode::Setup()
 
   // start dynamic_reconfigure server for accelerations
   ROSARIA::AccelerationsConfig accels_max;
-  accels_max.trans_accel = robot->getAbsoluteMaxTransAccel();
-  accels_max.trans_decel = robot->getAbsoluteMaxTransDecel();
+  accels_max.trans_accel = robot->getAbsoluteMaxTransAccel() / 1000;
+  accels_max.trans_decel = robot->getAbsoluteMaxTransDecel() / 1000;
   // TODO: Fix rqt dynamic_reconfigure gui to handle empty intervals
   // Until then, set unit length interval.
-  accels_max.lat_accel = (robot->getAbsoluteMaxLatAccel() > 0.0) ? robot->getAbsoluteMaxLatAccel() : 1.0;
-  accels_max.lat_decel = (robot->getAbsoluteMaxLatDecel() > 0.0) ? robot->getAbsoluteMaxLatDecel() : 1.0;
-  accels_max.rot_accel = robot->getAbsoluteMaxRotAccel();
-  accels_max.rot_decel = robot->getAbsoluteMaxRotDecel();
+  accels_max.lat_accel = ((robot->getAbsoluteMaxLatAccel() > 0.0) ? robot->getAbsoluteMaxLatAccel() : 1.0) / 1000;
+  accels_max.lat_decel = ((robot->getAbsoluteMaxLatDecel() > 0.0) ? robot->getAbsoluteMaxLatDecel() : 1.0) / 1000;
+  accels_max.rot_accel = robot->getAbsoluteMaxRotAccel() * M_PI/180;
+  accels_max.rot_decel = robot->getAbsoluteMaxRotDecel() * M_PI/180;
   accel_server.setConfigMax(accels_max);
   accel_server.setCallback(boost::bind(&RosAriaNode::accelerations_reconfigure_callback, this, _1, _2));
 
