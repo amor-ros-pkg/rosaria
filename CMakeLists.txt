@@ -30,7 +30,7 @@ add_message_files(
 #  # TODO: List your msg files here
 #)
 
-generate_dynamic_reconfigure_options(cfg/Accelerations.cfg)
+generate_dynamic_reconfigure_options(cfg/RosAria.cfg)
 
 #common commands for building c++ executables and libraries
 #add_library(${PROJECT_NAME} src/example.cpp)

@@ -14,7 +14,7 @@
 #include <tf/transform_broadcaster.h>
 #include "tf/transform_datatypes.h"
 #include <dynamic_reconfigure/server.h>
-#include <ROSARIA/AccelerationsConfig.h>
+#include <ROSARIA/RosAriaConfig.h>
 #include "std_msgs/Float64.h"
 #include "std_msgs/Int8.h"
 
@@ -64,7 +64,8 @@ class RosAriaNode
     void spin();
     void publish();
     void sonarConnectCb();
-    void accelerations_reconfigure_callback(ROSARIA::AccelerationsConfig &config, uint32_t level);
+    void dynamic_reconfigureCB(ROSARIA::RosAriaConfig &config, uint32_t level);
+    void readParameters();
 
   protected:
     ros::NodeHandle n;
@@ -105,26 +106,127 @@ class RosAriaNode
     bool debug_aria;
     std::string aria_log_filename;
     
+    // Robot Parameters
+    int TicksMM, DriftFactor, RevCount;  // Odometry Calibration Settings
+    
     // dynamic_reconfigure
-    dynamic_reconfigure::Server<ROSARIA::AccelerationsConfig> accel_server;
+    dynamic_reconfigure::Server<ROSARIA::RosAriaConfig> dynamic_reconfigure_server;
 };
 
-void RosAriaNode::accelerations_reconfigure_callback(ROSARIA::AccelerationsConfig &config, uint32_t level)
+void RosAriaNode::readParameters()
 {
-  ROS_INFO("RosAria: Accelerations reconfigure request:\n"
-           "  Translational accel: %f, decel: %f\n"
-           "  Lateral accel: %f, decel: %f\n"
-           "  Rotational accel: %f, decel: %f",
-           config.trans_accel, config.trans_decel,
-           config.lat_accel, config.lat_decel,
-           config.rot_accel, config.rot_decel);
+  // Robot Parameters  
+  ros::NodeHandle n_("~");
+  if (n_.hasParam("TicksMM"))
+  {
+    n_.getParam( "TicksMM", TicksMM);
+    ROS_INFO("Setting TicksMM from ROS Parameter: %d", TicksMM);
+    robot->comInt(93, TicksMM);
+  }
+  else
+  {
+    TicksMM = robot->getOrigRobotConfig()->getTicksMM();
+    n_.setParam( "RevCount", RevCount);
+  }
   
-  this->robot->setTransAccel(config.trans_accel*1000);
-  this->robot->setTransDecel(config.trans_decel*1000);
-  this->robot->setLatAccel(config.lat_accel*1000);
-  this->robot->setLatDecel(config.lat_decel*1000);
-  this->robot->setRotAccel(config.rot_accel*180/M_PI);
-  this->robot->setRotDecel(config.rot_decel*180/M_PI);
+  if (n_.hasParam("DriftFactor"))
+  {
+    n_.getParam( "DriftFactor", DriftFactor);
+    ROS_INFO("Setting DriftFactor from ROS Parameter: %d", DriftFactor);
+    robot->comInt(89, DriftFactor);
+  }
+  else
+  {
+    DriftFactor = robot->getOrigRobotConfig()->getDriftFactor();
+    n_.setParam( "RevCount", RevCount);
+  }
+  
+  if (n_.hasParam("RevCount"))
+  {
+    n_.getParam( "RevCount", RevCount);
+    ROS_INFO("Setting RevCount from ROS Parameter: %d", RevCount);
+    robot->comInt(88, RevCount);
+  }
+  else
+  {
+    RevCount = robot->getOrigRobotConfig()->getRevCount();
+    n_.setParam( "RevCount", RevCount);
+  }
+}
+
+void RosAriaNode::dynamic_reconfigureCB(ROSARIA::RosAriaConfig &config, uint32_t level)
+{
+  //
+  // Odometry Settings
+  //
+  if(TicksMM != config.TicksMM and TicksMM > 0)
+  {
+    ROS_INFO("Setting TicksMM from Dynamic Reconfigure: %d -> %d ", TicksMM, config.TicksMM);
+    TicksMM = config.TicksMM;
+    robot->comInt(93, TicksMM);
+  }
+  
+  if(DriftFactor != config.DriftFactor)
+  {
+    ROS_INFO("Setting DriftFactor from Dynamic Reconfigure: %d -> %d ", DriftFactor, config.DriftFactor);
+    DriftFactor = config.DriftFactor;
+    robot->comInt(89, DriftFactor);
+  }
+  
+  if(RevCount != config.RevCount and RevCount > 0)
+  {
+    ROS_INFO("Setting RevCount from Dynamic Reconfigure: %d -> %d ", RevCount, config.RevCount);
+    RevCount = config.RevCount;
+    robot->comInt(88, RevCount);
+  }
+  
+  //
+  // Acceleration Parameters
+  //
+  int value;
+  value = config.trans_accel * 1000;
+  if(value != robot->getTransAccel() and value > 0)
+  {
+    ROS_INFO("Setting TransAccel from Dynamic Reconfigure: %d", value);
+    robot->setTransAccel(value);
+  } 
+  
+  value = config.trans_decel * 1000;
+  if(value != robot->getTransDecel() and value > 0)
+  {
+    ROS_INFO("Setting TransDecel from Dynamic Reconfigure: %d", value);
+    robot->setTransDecel(value);
+  } 
+  
+  value = config.lat_accel * 1000;
+  if(value != robot->getLatAccel() and value > 0)
+  {
+    ROS_INFO("Setting LatAccel from Dynamic Reconfigure: %d", value);
+    if (robot->getAbsoluteMaxLatAccel() > 0 )
+      robot->setLatAccel(value);
+  } 
+  
+  value = config.lat_decel * 1000;
+  if(value != robot->getLatDecel() and value > 0)
+  {
+    ROS_INFO("Setting LatDecel from Dynamic Reconfigure: %d", value);
+    if (robot->getAbsoluteMaxLatDecel() > 0 )
+      robot->setLatDecel(value);
+  } 
+  
+  value = config.rot_accel * 180/M_PI;
+  if(value != robot->getRotAccel() and value > 0)
+  {
+    ROS_INFO("Setting RotAccel from Dynamic Reconfigure: %d", value);
+    robot->setRotAccel(value);
+  } 
+  
+  value = config.rot_decel * 180/M_PI;
+  if(value != robot->getRotDecel() and value > 0)
+  {
+    ROS_INFO("Setting RotDecel from Dynamic Reconfigure: %d", value);
+    robot->setRotDecel(value);
+  } 
 }
 
 void RosAriaNode::sonarConnectCb()
@@ -237,18 +339,42 @@ int RosAriaNode::Setup()
     return 1;
   }
 
-  // start dynamic_reconfigure server for accelerations
-  ROSARIA::AccelerationsConfig accels_max;
-  accels_max.trans_accel = robot->getAbsoluteMaxTransAccel() / 1000;
-  accels_max.trans_decel = robot->getAbsoluteMaxTransDecel() / 1000;
+  readParameters();
+
+  // start dynamic_reconfigure server
+  ROSARIA::RosAriaConfig dynConf_max;
+  dynConf_max.trans_accel = robot->getAbsoluteMaxTransAccel() / 1000;
+  dynConf_max.trans_decel = robot->getAbsoluteMaxTransDecel() / 1000;
   // TODO: Fix rqt dynamic_reconfigure gui to handle empty intervals
   // Until then, set unit length interval.
-  accels_max.lat_accel = ((robot->getAbsoluteMaxLatAccel() > 0.0) ? robot->getAbsoluteMaxLatAccel() : 1.0) / 1000;
-  accels_max.lat_decel = ((robot->getAbsoluteMaxLatDecel() > 0.0) ? robot->getAbsoluteMaxLatDecel() : 1.0) / 1000;
-  accels_max.rot_accel = robot->getAbsoluteMaxRotAccel() * M_PI/180;
-  accels_max.rot_decel = robot->getAbsoluteMaxRotDecel() * M_PI/180;
-  accel_server.setConfigMax(accels_max);
-  accel_server.setCallback(boost::bind(&RosAriaNode::accelerations_reconfigure_callback, this, _1, _2));
+  dynConf_max.lat_accel = ((robot->getAbsoluteMaxLatAccel() > 0.0) ? robot->getAbsoluteMaxLatAccel() : 0.1) / 1000;
+  dynConf_max.lat_decel = ((robot->getAbsoluteMaxLatDecel() > 0.0) ? robot->getAbsoluteMaxLatDecel() : 0.1) / 1000;
+  dynConf_max.rot_accel = robot->getAbsoluteMaxRotAccel() * M_PI/180;
+  dynConf_max.rot_decel = robot->getAbsoluteMaxRotDecel() * M_PI/180;
+  
+  // I'm setting these upper bounds relitivly arbitrarily, feel free to increase them.
+  dynConf_max.TicksMM     = 200;
+  dynConf_max.DriftFactor = 200;
+  dynConf_max.RevCount    = 32760;
+  
+  dynamic_reconfigure_server.setConfigMax(dynConf_max);
+  
+  
+  ROSARIA::RosAriaConfig dynConf_default;
+  dynConf_default.trans_accel = robot->getTransAccel() / 1000;
+  dynConf_default.trans_decel = robot->getTransDecel() / 1000;
+  dynConf_default.lat_accel   = robot->getLatAccel() / 1000;
+  dynConf_default.lat_decel   = robot->getLatDecel() / 1000;
+  dynConf_default.rot_accel   = robot->getRotAccel() * M_PI/180;
+  dynConf_default.rot_decel   = robot->getRotDecel() * M_PI/180;
+
+  dynConf_default.TicksMM     = TicksMM;
+  dynConf_default.DriftFactor = DriftFactor;
+  dynConf_default.RevCount    = RevCount;
+  
+  dynamic_reconfigure_server.setConfigDefault(dynConf_max);
+  
+  dynamic_reconfigure_server.setCallback(boost::bind(&RosAriaNode::dynamic_reconfigureCB, this, _1, _2));
 
   // Enable the motors
   robot->enableMotors();
