@@ -8,13 +8,13 @@
 #include "geometry_msgs/PoseStamped.h"
 #include <sensor_msgs/PointCloud.h>  //for sonar data
 #include "nav_msgs/Odometry.h"
-#include "ROSARIA/BumperState.h"
+#include "rosaria/BumperState.h"
 #include "tf/tf.h"
 #include "tf/transform_listener.h"  //for tf::getPrefixParam
 #include <tf/transform_broadcaster.h>
 #include "tf/transform_datatypes.h"
 #include <dynamic_reconfigure/server.h>
-#include <ROSARIA/RosAriaConfig.h>
+#include <rosaria/RosAriaConfig.h>
 #include "std_msgs/Float64.h"
 #include "std_msgs/Float32.h"
 #include "std_msgs/Int8.h"
@@ -42,7 +42,7 @@ class RosAriaNode
     void spin();
     void publish();
     void sonarConnectCb();
-    void dynamic_reconfigureCB(ROSARIA::RosAriaConfig &config, uint32_t level);
+    void dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t level);
     void readParameters();
 
   protected:
@@ -76,7 +76,7 @@ class RosAriaNode
     ArRobotConnector *conn;
     ArRobot *robot;
     nav_msgs::Odometry position;
-    ROSARIA::BumperState bumpers;
+    rosaria::BumperState bumpers;
     ArPose pos;
     ArFunctorC<RosAriaNode> myPublishCB;
     //ArRobot::ChargeState batteryCharge;
@@ -102,7 +102,7 @@ class RosAriaNode
     int TicksMM, DriftFactor, RevCount;  // Odometry Calibration Settings
     
     // dynamic_reconfigure
-    dynamic_reconfigure::Server<ROSARIA::RosAriaConfig> dynamic_reconfigure_server;
+    dynamic_reconfigure::Server<rosaria::RosAriaConfig> dynamic_reconfigure_server;
 };
 
 void RosAriaNode::readParameters()
@@ -148,7 +148,7 @@ void RosAriaNode::readParameters()
   robot->unlock();
 }
 
-void RosAriaNode::dynamic_reconfigureCB(ROSARIA::RosAriaConfig &config, uint32_t level)
+void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t level)
 {
   //
   // Odometry Settings
@@ -279,7 +279,7 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   // subscribers when they subscribe).
   // See ros::NodeHandle API docs.
   pose_pub = n.advertise<nav_msgs::Odometry>("pose",1000);
-  bumpers_pub = n.advertise<ROSARIA::BumperState>("bumper_state",1000);
+  bumpers_pub = n.advertise<rosaria::BumperState>("bumper_state",1000);
   sonar_pub = n.advertise<sensor_msgs::PointCloud>("sonar", 50,
     boost::bind(&RosAriaNode::sonarConnectCb, this),
     boost::bind(&RosAriaNode::sonarConnectCb, this));
@@ -381,7 +381,7 @@ int RosAriaNode::Setup()
   readParameters();
 
   // start dynamic_reconfigure server
-  ROSARIA::RosAriaConfig dynConf_max;
+  rosaria::RosAriaConfig dynConf_max;
   dynConf_max.trans_accel = robot->getAbsoluteMaxTransAccel() / 1000;
   dynConf_max.trans_decel = robot->getAbsoluteMaxTransDecel() / 1000;
   // TODO: Fix rqt dynamic_reconfigure gui to handle empty intervals
@@ -399,7 +399,7 @@ int RosAriaNode::Setup()
   dynamic_reconfigure_server.setConfigMax(dynConf_max);
   
   
-  ROSARIA::RosAriaConfig dynConf_default;
+  rosaria::RosAriaConfig dynConf_default;
   dynConf_default.trans_accel = robot->getTransAccel() / 1000;
   dynConf_default.trans_decel = robot->getTransDecel() / 1000;
   dynConf_default.lat_accel   = robot->getLatAccel() / 1000;
