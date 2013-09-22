@@ -179,8 +179,8 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   sonar_pub = n.advertise<sensor_msgs::PointCloud>("sonar", 50, boost::bind(&RosAriaNode::sonarConnectCb, this),
     boost::bind(&RosAriaNode::sonarConnectCb, this));
 
-  voltage_pub = n.advertise<std_msgs::Float64>("BatteryVoltage", 1000);
-  charge_pub = n.advertise<std_msgs::Int8>("BatteryCharge", 1000);
+  voltage_pub = n.advertise<std_msgs::Float64>("battery_voltage", 1000);
+  charge_pub = n.advertise<std_msgs::Int8>("battery_charge", 1000);
   
   // subscribe to services
   cmdvel_sub = n.subscribe( "cmd_vel", 1, (boost::function <void(const geometry_msgs::TwistConstPtr&)>)
@@ -334,7 +334,7 @@ void RosAriaNode::publish()
   // Decide if RealBatteryVoltage or BatteryVoltageNow is a better option
   // TODO Add BatteryCharge
   std_msgs::Float64 batteryVoltage;
-  batteryVoltage.data = robot->getBatteryVoltage();
+  batteryVoltage.data = robot->getBatteryVoltageNow()*12;
   voltage_pub.publish(batteryVoltage);
 
  // batteryCharge = robot->getChargeState();
