@@ -1,19 +1,19 @@
-uri: 'http://robots.mobilerobots.com/ARIA/download/archives/ARIA-2.7.2.tgz'
-md5sum: df240d1d0ac81eb580f4a82c9a268409
+uri: 'http://robots.mobilerobots.com/ARIA/download/archives/ARIA-2.8.0.tgz'
+md5sum: b9a738e4601f3c59aa49c8979a9a8fa5
 install-script: |
   #!/bin/bash
   set -o errexit
   make clean
-  make
+  make -j2
   echo "About to run checkinstall make install"
-  sudo checkinstall -y --nodoc --pkgname=libaria-sourcedep --pkgversion=2.7.2 make install
+  sudo checkinstall -y --nodoc --pkgname=libaria-sourcedep --pkgversion=2.8.0 make install
 check-presence-script: |
   #!/bin/bash
-  if test "x`dpkg-query -W -f='${Package} ${Status} ${Version}\n' libaria-sourcedep`" != 'xlibaria-sourcedep install ok installed 2.7.2-1'; then
+  if test "x`dpkg-query -W -f='${Package} ${Status} ${Version}\n' libaria-sourcedep`" != 'xlibaria-sourcedep install ok installed 2.8.0-1'; then
     echo "libaria-sourcedep not installed"
     exit 1
   else
     exit 0
   fi
-exec-path: Aria-2.7.2
+exec-path: Aria-2.8.0
 depends: [checkinstall ]

@@ -71,6 +71,7 @@ class RosAriaNode
     ros::Time veltime;
 
     std::string serial_port;
+    int serial_baud;
 
     ArRobotConnector *conn;
     ArRobot *robot;
@@ -241,7 +242,7 @@ void RosAriaNode::sonarConnectCb()
 }
 
 RosAriaNode::RosAriaNode(ros::NodeHandle nh) : 
-  myPublishCB(this, &RosAriaNode::publish), use_sonar(false)
+  myPublishCB(this, &RosAriaNode::publish), serial_port(""), serial_baud(0), use_sonar(false)
 {
   // read in config options
   n = nh;
@@ -249,6 +250,10 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   // !!! port !!!
   n.param( "port", serial_port, std::string("/dev/ttyUSB0") );
   ROS_INFO( "RosAria: using port: [%s]", serial_port.c_str() );
+
+  n.param("baud", serial_baud, 0);
+  if(serial_baud != 0)
+  ROS_INFO("RosAria: using serial port baud rate %d", serial_baud);
 
   // handle debugging more elegantly
   n.param( "debug_aria", debug_aria, false ); // default not to debug
@@ -318,6 +323,7 @@ int RosAriaNode::Setup()
   robot = new ArRobot();
   ArArgumentBuilder *args = new ArArgumentBuilder(); //  never freed
   ArArgumentParser *argparser = new ArArgumentParser(args); // Warning never freed
+  argparser->loadDefaultArguments(); // adds any arguments given in /etc/Aria.args.  Useful on robots with unusual serial port or baud rate (e.g. pioneer lx)
 
   // Now add any parameters given via ros params (see RosAriaNode constructor):
 
@@ -335,6 +341,15 @@ int RosAriaNode::Setup()
   {
     args->add("-robotPort"); // pass robot's serial port to Aria
     args->add(serial_port.c_str());
+  }
+
+  // if a baud rate was specified in baud parameter
+  if(serial_baud != 0)
+  {
+    args->add("-robotBaud");
+    char tmp[100];
+    snprintf(tmp, 100, "%d", serial_baud);
+    args->add(tmp);
   }
   
   if( debug_aria )
