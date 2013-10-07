@@ -16,6 +16,7 @@
 #include <dynamic_reconfigure/server.h>
 #include <ROSARIA/RosAriaConfig.h>
 #include "std_msgs/Float64.h"
+#include "std_msgs/Float32.h"
 #include "std_msgs/Int8.h"
 
 #include <sstream>
@@ -73,7 +74,11 @@ class RosAriaNode
     ros::Publisher bumpers_pub;
     ros::Publisher sonar_pub;
     ros::Publisher voltage_pub;
-    ros::Publisher charge_pub;
+
+    ros::Publisher recharge_state_pub;
+    std_msgs::Int8 recharge_state;
+
+    ros::Publisher state_of_charge_pub;
     ros::Subscriber cmdvel_sub;
 
     ros::Time veltime;
@@ -282,7 +287,9 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
     boost::bind(&RosAriaNode::sonarConnectCb, this));
 
   voltage_pub = n.advertise<std_msgs::Float64>("battery_voltage", 1000);
-  charge_pub = n.advertise<std_msgs::Int8>("battery_charge", 1000);
+  recharge_state_pub = n.advertise<std_msgs::Int8>("battery_recharge_state", 5, true /*latch*/ );
+  recharge_state.data = -2;
+  state_of_charge_pub = n.advertise<std_msgs::Float32>("battery_state_of_charge", 100);
   
   // subscribe to services
   cmdvel_sub = n.subscribe( "cmd_vel", 1, (boost::function <void(const geometry_msgs::TwistConstPtr&)>)
@@ -457,18 +464,28 @@ void RosAriaNode::publish()
   bumpers_pub.publish(bumpers);
 
   //Publish battery information
-  // Decide if RealBatteryVoltage or BatteryVoltageNow is a better option
-  // TODO Add BatteryCharge
+  // TODO: Decide if BatteryVoltageNow (normalized to (0,12)V)  is a better option
   std_msgs::Float64 batteryVoltage;
-  batteryVoltage.data = robot->getBatteryVoltageNow()*12;
+  batteryVoltage.data = robot->getRealBatteryVoltageNow();
   voltage_pub.publish(batteryVoltage);
 
- // batteryCharge = robot->getChargeState();
-  std_msgs::Int8 temp;
-  temp.data = robot->getChargeState();
-  charge_pub.publish(temp);
+  if(robot->haveStateOfCharge())
+  {
+    std_msgs::Float32 soc;
+    soc.data = robot->getStateOfCharge()/100.0;
+    state_of_charge_pub.publish(soc);
+  }
 
-  // Publish sonar information, if necessary.
+  // publish recharge state if changed
+  char s = robot->getChargeState();
+  if(s != recharge_state.data)
+  {
+    ROS_INFO("RosAria: publishing new recharge state %d.", s);
+    recharge_state.data = s;
+    recharge_state_pub.publish(recharge_state);
+  }
+
+  // Publish sonar information, if enabled.
   if (use_sonar) {
     sensor_msgs::PointCloud cloud;	//sonar readings.
     cloud.header.stamp = position.header.stamp;	//copy time.
