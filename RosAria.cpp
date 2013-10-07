@@ -18,6 +18,8 @@
 #include "std_msgs/Float64.h"
 #include "std_msgs/Float32.h"
 #include "std_msgs/Int8.h"
+#include "std_msgs/Bool.h"
+#include "std_srvs/Empty.h"
 
 #include <sstream>
 
@@ -62,6 +64,8 @@ class RosAriaNode
   public:
     int Setup();
     void cmdvel_cb( const geometry_msgs::TwistConstPtr &);
+    //void cmd_enable_motors_cb();
+    //void cmd_disable_motors_cb();
     void spin();
     void publish();
     void sonarConnectCb();
@@ -79,7 +83,17 @@ class RosAriaNode
     std_msgs::Int8 recharge_state;
 
     ros::Publisher state_of_charge_pub;
+
+    ros::Publisher motors_state_pub;
+    std_msgs::Bool motors_state;
+    bool published_motors_state;
+
     ros::Subscriber cmdvel_sub;
+
+    ros::ServiceServer enable_srv;
+    ros::ServiceServer disable_srv;
+    bool enable_motors_cb(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
+    bool disable_motors_cb(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
     ros::Time veltime;
 
@@ -290,10 +304,18 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   recharge_state_pub = n.advertise<std_msgs::Int8>("battery_recharge_state", 5, true /*latch*/ );
   recharge_state.data = -2;
   state_of_charge_pub = n.advertise<std_msgs::Float32>("battery_state_of_charge", 100);
+
+  motors_state_pub = n.advertise<std_msgs::Bool>("motors_state", 5, true /*latch*/ );
+  motors_state.data = false;
+  published_motors_state = false;
   
   // subscribe to services
   cmdvel_sub = n.subscribe( "cmd_vel", 1, (boost::function <void(const geometry_msgs::TwistConstPtr&)>)
     boost::bind(&RosAriaNode::cmdvel_cb, this, _1 ));
+
+  // advertise enable/disable services
+  enable_srv = n.advertiseService("enable_motors", &RosAriaNode::enable_motors_cb, this);
+  disable_srv = n.advertiseService("disable_motors", &RosAriaNode::disable_motors_cb, this);
   
   veltime = ros::Time::now();
 }
@@ -485,6 +507,16 @@ void RosAriaNode::publish()
     recharge_state_pub.publish(recharge_state);
   }
 
+  // publish motors state if changed
+  bool e = robot->areMotorsEnabled();
+  if(e != motors_state.data || !published_motors_state)
+  {
+	ROS_INFO("RosAria: publishing new motors state %d.", e);
+	motors_state.data = e;
+	motors_state_pub.publish(motors_state);
+	published_motors_state = true;
+  }
+
   // Publish sonar information, if enabled.
   if (use_sonar) {
     sensor_msgs::PointCloud cloud;	//sonar readings.
@@ -531,6 +563,28 @@ void RosAriaNode::publish()
   }
 
   ros::Duration(1e-3).sleep();
+}
+
+bool RosAriaNode::enable_motors_cb(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
+{
+    ROS_INFO("RosAria: Enable motors request.");
+    robot->lock();
+    if(robot->isEStopPressed())
+        ROS_WARN("RosAria: Warning: Enable motors requested, but robot also has E-Stop button pressed. Motors will not enable.");
+    robot->enableMotors();
+    robot->unlock();
+	// todo could wait and see if motors do become enabled, and send a response with an error flag if not
+    return true;
+}
+
+bool RosAriaNode::disable_motors_cb(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
+{
+    ROS_INFO("RosAria: Disable motors request.");
+    robot->lock();
+    robot->disableMotors();
+    robot->unlock();
+	// todo could wait and see if motors do become disabled, and send a response with an error flag if not
+    return true;
 }
 
 void
