@@ -451,7 +451,7 @@ void RosAriaNode::publish()
   pos = robot->getPose();
   tf::poseTFToMsg(tf::Transform(tf::createQuaternionFromYaw(pos.getTh()*M_PI/180), tf::Vector3(pos.getX()/1000,
     pos.getY()/1000, 0)), position.pose.pose); //Aria returns pose in mm.
-  position.twist.twist.linear.x = robot->getVel()/1000; //Aria returns velocity in mm/s.
+  position.twist.twist.linear.x = robot->getVel()/1000.0; //Aria returns velocity in mm/s.
   position.twist.twist.linear.y = robot->getLatVel()/1000.0;
   position.twist.twist.angular.z = robot->getRotVel()*M_PI/180;
   
@@ -459,8 +459,12 @@ void RosAriaNode::publish()
   position.child_frame_id = frame_id_base_link;
   position.header.stamp = ros::Time::now();
   pose_pub.publish(position);
-  ROS_DEBUG("RosAria: rcv: %f %f %f", position.header.stamp.toSec(), (double) position.twist.twist.linear.x,
-    (double) position.twist.twist.angular.z);
+  ROS_DEBUG("RosAria: publish vel: (time %f) linear x: %f, y: %f; angular z: %f", 
+    position.header.stamp.toSec(), 
+    (double) position.twist.twist.linear.x,
+    (double) position.twist.twist.linear.y,
+    (double) position.twist.twist.angular.z
+  );
 
   // publishing transform odom->base_link
   odom_trans.header.stamp = ros::Time::now();
