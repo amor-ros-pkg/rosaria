@@ -453,8 +453,17 @@ void RosAriaNode::publish()
   position.child_frame_id = frame_id_base_link;
   position.header.stamp = ros::Time::now();
   pose_pub.publish(position);
-  ROS_DEBUG("RosAria: rcv: %f %f %f", position.header.stamp.toSec(), (double) position.twist.twist.linear.x,
-    (double) position.twist.twist.angular.z);
+
+  ROS_DEBUG("RosAria: publish: (time %f) pose x: %f, y: %f, angle: %f; linear vel x: %f, y: %f; angular vel z: %f", 
+    position.header.stamp.toSec(), 
+    (double)position.pose.pose.position.x,
+    (double)position.pose.pose.position.y,
+    (double)position.pose.pose.orientation.w,
+    (double) position.twist.twist.linear.x,
+    (double) position.twist.twist.linear.y,
+    (double) position.twist.twist.angular.z
+  );
+
 
   // publishing transform odom->base_link
   odom_trans.header.stamp = ros::Time::now();
