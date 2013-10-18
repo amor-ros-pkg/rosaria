@@ -606,6 +606,8 @@ RosAriaNode::cmdvel_cb( const geometry_msgs::TwistConstPtr &msg)
 
   robot->lock();
   robot->setVel(msg->linear.x*1e3);
+  if(robot->hasLatVel())
+    robot->setLatVel(msg->linear.y*1e3);
   robot->setRotVel(msg->angular.z*180/M_PI);
   robot->unlock();
   ROS_DEBUG("RosAria: sent vels to to aria (time %f): x vel %f mm/s, y vel %f mm/s, ang vel %f deg/s", veltime.toSec(),
