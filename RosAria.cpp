@@ -102,7 +102,7 @@ class RosAriaNode
     int TicksMM, DriftFactor, RevCount;  // Odometry Calibration Settings
     
     // dynamic_reconfigure
-    dynamic_reconfigure::Server<rosaria::RosAriaConfig> dynamic_reconfigure_server;
+    dynamic_reconfigure::Server<rosaria::RosAriaConfig> *dynamic_reconfigure_server;
 };
 
 void RosAriaNode::readParameters()
@@ -119,7 +119,8 @@ void RosAriaNode::readParameters()
   else
   {
     TicksMM = robot->getOrigRobotConfig()->getTicksMM();
-    n_.setParam( "RevCount", RevCount);
+    n_.setParam( "TicksMM", RevCount);
+    ROS_INFO("Setting TicksMM from robot EEPROM: %d", TicksMM);
   }
   
   if (n_.hasParam("DriftFactor"))
@@ -131,7 +132,8 @@ void RosAriaNode::readParameters()
   else
   {
     DriftFactor = robot->getOrigRobotConfig()->getDriftFactor();
-    n_.setParam( "RevCount", RevCount);
+    n_.setParam( "DriftFactor", RevCount);
+    ROS_INFO("Setting DriftFactor from robot EEPROM: %d", DriftFactor);
   }
   
   if (n_.hasParam("RevCount"))
@@ -144,6 +146,7 @@ void RosAriaNode::readParameters()
   {
     RevCount = robot->getOrigRobotConfig()->getRevCount();
     n_.setParam( "RevCount", RevCount);
+    ROS_INFO("Setting RevCount from robot EEPROM: %d", RevCount);
   }
   robot->unlock();
 }
@@ -154,7 +157,7 @@ void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t
   // Odometry Settings
   //
   robot->lock();
-  if(TicksMM != config.TicksMM and TicksMM > 0)
+  if(TicksMM != config.TicksMM and config.TicksMM > 0)
   {
     ROS_INFO("Setting TicksMM from Dynamic Reconfigure: %d -> %d ", TicksMM, config.TicksMM);
     TicksMM = config.TicksMM;
@@ -168,7 +171,7 @@ void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t
     robot->comInt(89, DriftFactor);
   }
   
-  if(RevCount != config.RevCount and RevCount > 0)
+  if(RevCount != config.RevCount and config.RevCount > 0)
   {
     ROS_INFO("Setting RevCount from Dynamic Reconfigure: %d -> %d ", RevCount, config.RevCount);
     RevCount = config.RevCount;
@@ -380,7 +383,28 @@ int RosAriaNode::Setup()
 
   readParameters();
 
-  // start dynamic_reconfigure server
+  // Start dynamic_reconfigure server
+  dynamic_reconfigure_server = new dynamic_reconfigure::Server<rosaria::RosAriaConfig>;
+  
+  // Setup Parameter Minimums
+  rosaria::RosAriaConfig dynConf_min;
+  dynConf_min.trans_accel = robot->getAbsoluteMaxTransAccel() / 1000;
+  dynConf_min.trans_decel = robot->getAbsoluteMaxTransDecel() / 1000;
+  // TODO: Fix rqt dynamic_reconfigure gui to handle empty intervals
+  // Until then, set unit length interval.
+  dynConf_min.lat_accel = ((robot->getAbsoluteMaxLatAccel() > 0.0) ? robot->getAbsoluteMaxLatAccel() : 0.1) / 1000;
+  dynConf_min.lat_decel = ((robot->getAbsoluteMaxLatDecel() > 0.0) ? robot->getAbsoluteMaxLatDecel() : 0.1) / 1000;
+  dynConf_min.rot_accel = robot->getAbsoluteMaxRotAccel() * M_PI/180;
+  dynConf_min.rot_decel = robot->getAbsoluteMaxRotDecel() * M_PI/180;
+  
+  // I'm setting these upper bounds relitivly arbitrarily, feel free to increase them.
+  dynConf_min.TicksMM     = 10;
+  dynConf_min.DriftFactor = -200;
+  dynConf_min.RevCount    = -32760;
+  
+  dynamic_reconfigure_server->setConfigMin(dynConf_min);
+  
+  
   rosaria::RosAriaConfig dynConf_max;
   dynConf_max.trans_accel = robot->getAbsoluteMaxTransAccel() / 1000;
   dynConf_max.trans_decel = robot->getAbsoluteMaxTransDecel() / 1000;
@@ -396,7 +420,7 @@ int RosAriaNode::Setup()
   dynConf_max.DriftFactor = 200;
   dynConf_max.RevCount    = 32760;
   
-  dynamic_reconfigure_server.setConfigMax(dynConf_max);
+  dynamic_reconfigure_server->setConfigMax(dynConf_max);
   
   
   rosaria::RosAriaConfig dynConf_default;
@@ -411,9 +435,9 @@ int RosAriaNode::Setup()
   dynConf_default.DriftFactor = DriftFactor;
   dynConf_default.RevCount    = RevCount;
   
-  dynamic_reconfigure_server.setConfigDefault(dynConf_max);
+  dynamic_reconfigure_server->setConfigDefault(dynConf_max);
   
-  dynamic_reconfigure_server.setCallback(boost::bind(&RosAriaNode::dynamic_reconfigureCB, this, _1, _2));
+  dynamic_reconfigure_server->setCallback(boost::bind(&RosAriaNode::dynamic_reconfigureCB, this, _1, _2));
 
   // Enable the motors
   robot->enableMotors();
