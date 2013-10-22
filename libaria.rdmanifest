@@ -1,21 +1,19 @@
-uri: 'http://http.debian.net/debian/pool/main/liba/libaria/libaria_2.8.0+repack.orig.tar.bz2'
-md5sum: d4adcc4e01e211ee3559d807f400f7d9
+uri: 'http://robots.mobilerobots.com/ARIA/download/archives/ARIA-2.7.2.tgz'
+md5sum: df240d1d0ac81eb580f4a82c9a268409
 install-script: |
   #!/bin/bash
   set -o errexit
-  make -j $(nproc)
-  LD_LIBRARY_PATH=lib make params
-  echo "Uninstall previous version of libaria-sourcedep"
-  sudo dpkg -P libaria-sourcedep
+  make clean
+  make
   echo "About to run checkinstall make install"
-  sudo checkinstall -y --nodoc --pkgname=libaria-sourcedep --pkgversion=2.8.0 make --ignore-errors install
+  sudo checkinstall -y --nodoc --pkgname=libaria-sourcedep --pkgversion=2.7.2 make install
 check-presence-script: |
   #!/bin/bash
-  if test "x`dpkg-query -W -f='${Package} ${Status} ${Version}\n' libaria-sourcedep`" != 'xlibaria-sourcedep install ok installed 2.8.0-1'; then
+  if test "x`dpkg-query -W -f='${Package} ${Status} ${Version}\n' libaria-sourcedep`" != 'xlibaria-sourcedep install ok installed 2.7.2-1'; then
     echo "libaria-sourcedep not installed"
     exit 1
   else
     exit 0
   fi
-exec-path: libaria-2.8.0.orig
+exec-path: Aria-2.7.2
 depends: [checkinstall ]
