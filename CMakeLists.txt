@@ -48,6 +48,7 @@ endif()
 
 add_executable(RosAria RosAria.cpp)
 add_dependencies(RosAria rosaria_gencfg)
+add_dependencies(RosAria rosaria_gencpp)
 
 target_link_libraries(RosAria ${catkin_LIBRARIES} ${Boost_LIBRARIES} Aria pthread dl rt)
 set_target_properties(RosAria PROPERTIES COMPILE_FLAGS "-fPIC")
