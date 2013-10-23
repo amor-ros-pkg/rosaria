@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <math.h>
-#include <Aria.h>
-
+#ifdef ADEPT_PKG
+  #include <Aria.h>
+#else
+  #include <Aria/Aria.h>
+#endif
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Pose.h"
