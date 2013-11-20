@@ -122,7 +122,7 @@ void RosAriaNode::readParameters()
   else
   {
     TicksMM = robot->getOrigRobotConfig()->getTicksMM();
-    n_.setParam( "TicksMM", RevCount);
+    n_.setParam( "TicksMM", TicksMM);
     ROS_INFO("Setting TicksMM from robot EEPROM: %d", TicksMM);
   }
   
