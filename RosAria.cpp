@@ -135,7 +135,7 @@ void RosAriaNode::readParameters()
   else
   {
     DriftFactor = robot->getOrigRobotConfig()->getDriftFactor();
-    n_.setParam( "DriftFactor", RevCount);
+    n_.setParam( "DriftFactor", DriftFactor);
     ROS_INFO("Setting DriftFactor from robot EEPROM: %d", DriftFactor);
   }
   
