@@ -125,6 +125,12 @@ void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t
     if (config.RevCount == 0)
       config.RevCount = RevCount;
     
+    if (config.trans_vel_max == 0)
+      config.trans_vel_max = robot->getTransVelMax() / 1000.0;
+
+    if (config.rot_vel_max == 0)
+      config.rot_vel_max = robot->getRotVelMax() / 1000.0;
+
     if (config.trans_accel == 0)
       config.trans_accel = robot->getTransAccel() / 1000.0;
 
@@ -148,7 +154,6 @@ void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t
   //
   // Odometry Settings
   //
-  
   if(config.TicksMM != TicksMM and config.TicksMM > 0)
   {
     ROS_INFO("Setting TicksMM from Dynamic Reconfigure: %d -> %d ", TicksMM, config.TicksMM);
@@ -169,11 +174,29 @@ void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t
     robot->comInt(88, config.RevCount);
     RevCount = config.RevCount;
   }
+
+  //
+  // Max velocity Parameters
+  int value;
+  value = config.trans_vel_max * 1000;
+  if(value != robot->getTransVelMax() and value > 0)
+  {
+    ROS_INFO("Setting TransVelMax/TransNegVelMax from Dynamic Reconfigure: %d", value);
+    robot->setTransVelMax(value);
+    robot->setTransNegVelMax(-value);
+  }
+
+  value = config.rot_vel_max * 1000;
+  if(value != robot->getRotVelMax() and value > 0)
+  {
+    ROS_INFO("Setting TransRotMax from Dynamic Reconfigure: %d", value);
+    robot->setRotVelMax(value);
+  }
   
   //
   // Acceleration Parameters
   //
-  int value;
+  
   value = config.trans_accel * 1000;
   if(value != robot->getTransAccel() and value > 0)
   {
@@ -379,6 +402,8 @@ int RosAriaNode::Setup()
   //set max values from robot max
   rosaria::RosAriaConfig dynConf_max;
   dynamic_reconfigure_server->getConfigMax(dynConf_max);
+  dynConf_max.trans_vel_max = robot->getAbsoluteMaxTransVel() / 1000;
+  dynConf_max.rot_vel_max = robot->getAbsoluteMaxRotVel() / 1000;
   dynConf_max.trans_accel = robot->getAbsoluteMaxTransAccel() / 1000;
   dynConf_max.trans_decel = robot->getAbsoluteMaxTransDecel() / 1000;
   // TODO: Fix rqt dynamic_reconfigure gui to handle empty intervals
