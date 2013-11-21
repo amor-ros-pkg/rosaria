@@ -113,17 +113,17 @@ void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t
   robot->lock();
   if (level == ~0)
   {//first run. check for 0 values == use robot defaults
+    TicksMM = robot->getOrigRobotConfig()->getTicksMM();
     if (config.TicksMM == 0)
-      config.TicksMM = robot->getOrigRobotConfig()->getTicksMM();
-    TicksMM = config.TicksMM;
+      config.TicksMM = TicksMM;
     
+    DriftFactor = robot->getOrigRobotConfig()->getDriftFactor();
     if (config.DriftFactor == 0)
-      config.DriftFactor = robot->getOrigRobotConfig()->getDriftFactor();
-    DriftFactor = config.DriftFactor;
+      config.DriftFactor = DriftFactor;
     
+    RevCount = robot->getOrigRobotConfig()->getRevCount();
     if (config.RevCount == 0)
-      config.RevCount = robot->getOrigRobotConfig()->getRevCount();
-    RevCount = config.RevCount;
+      config.RevCount = RevCount;
     
     if (config.trans_accel == 0)
       config.trans_accel = robot->getTransAccel() / 1000.0;
@@ -143,81 +143,79 @@ void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t
     if (config.rot_decel == 0)
       config.rot_decel = robot->getRotDecel() * M_PI/180;
   } 
-  else 
-  {//next runs
+  
 
-    //
-    // Odometry Settings
-    //
-    
-    if(config.TicksMM != TicksMM and config.TicksMM > 0)
-    {
-      ROS_INFO("Setting TicksMM from Dynamic Reconfigure: %d -> %d ", TicksMM, config.TicksMM);
-      robot->comInt(93, config.TicksMM);
-      TicksMM = config.TicksMM;
-    }
+  //
+  // Odometry Settings
+  //
+  
+  if(config.TicksMM != TicksMM and config.TicksMM > 0)
+  {
+    ROS_INFO("Setting TicksMM from Dynamic Reconfigure: %d -> %d ", TicksMM, config.TicksMM);
+    robot->comInt(93, config.TicksMM);
+    TicksMM = config.TicksMM;
+  }
       
-    if(config.DriftFactor != DriftFactor)
-    {
-      ROS_INFO("Setting DriftFactor from Dynamic Reconfigure: %d -> %d ", DriftFactor, config.DriftFactor);
-      robot->comInt(89, config.DriftFactor);
-      DriftFactor = config.DriftFactor;
-    }
+  if(config.DriftFactor != DriftFactor)
+  {
+    ROS_INFO("Setting DriftFactor from Dynamic Reconfigure: %d -> %d ", DriftFactor, config.DriftFactor);
+    robot->comInt(89, config.DriftFactor);
+    DriftFactor = config.DriftFactor;
+  }
   
-    if(config.RevCount != RevCount and config.RevCount > 0)
-    {
-      ROS_INFO("Setting RevCount from Dynamic Reconfigure: %d -> %d ", RevCount, config.RevCount);
-      robot->comInt(88, config.RevCount);
-      RevCount = config.RevCount;
-    }
+  if(config.RevCount != RevCount and config.RevCount > 0)
+  {
+    ROS_INFO("Setting RevCount from Dynamic Reconfigure: %d -> %d ", RevCount, config.RevCount);
+    robot->comInt(88, config.RevCount);
+    RevCount = config.RevCount;
+  }
   
-    //
-    // Acceleration Parameters
-    //
-    int value;
-    value = config.trans_accel * 1000;
-    if(value != robot->getTransAccel() and value > 0)
-    {
-      ROS_INFO("Setting TransAccel from Dynamic Reconfigure: %d", value);
-      robot->setTransAccel(value);
-    }
+  //
+  // Acceleration Parameters
+  //
+  int value;
+  value = config.trans_accel * 1000;
+  if(value != robot->getTransAccel() and value > 0)
+  {
+    ROS_INFO("Setting TransAccel from Dynamic Reconfigure: %d", value);
+    robot->setTransAccel(value);
+  }
   
-    value = config.trans_decel * 1000;
-    if(value != robot->getTransDecel() and value > 0)
-    {
-      ROS_INFO("Setting TransDecel from Dynamic Reconfigure: %d", value);
-      robot->setTransDecel(value);
-    } 
+  value = config.trans_decel * 1000;
+  if(value != robot->getTransDecel() and value > 0)
+  {
+    ROS_INFO("Setting TransDecel from Dynamic Reconfigure: %d", value);
+    robot->setTransDecel(value);
+  } 
   
-    value = config.lat_accel * 1000;
-    if(value != robot->getLatAccel() and value > 0)
-    {
-      ROS_INFO("Setting LatAccel from Dynamic Reconfigure: %d", value);
-      if (robot->getAbsoluteMaxLatAccel() > 0 )
-        robot->setLatAccel(value);
-    }
+  value = config.lat_accel * 1000;
+  if(value != robot->getLatAccel() and value > 0)
+  {
+    ROS_INFO("Setting LatAccel from Dynamic Reconfigure: %d", value);
+    if (robot->getAbsoluteMaxLatAccel() > 0 )
+      robot->setLatAccel(value);
+  }
   
-    value = config.lat_decel * 1000;
-    if(value != robot->getLatDecel() and value > 0)
-    {
-      ROS_INFO("Setting LatDecel from Dynamic Reconfigure: %d", value);
-      if (robot->getAbsoluteMaxLatDecel() > 0 )
-        robot->setLatDecel(value);
-    }
+  value = config.lat_decel * 1000;
+  if(value != robot->getLatDecel() and value > 0)
+  {
+    ROS_INFO("Setting LatDecel from Dynamic Reconfigure: %d", value);
+    if (robot->getAbsoluteMaxLatDecel() > 0 )
+      robot->setLatDecel(value);
+  }
   
-    value = config.rot_accel * 180/M_PI;
-    if(value != robot->getRotAccel() and value > 0)
-    {
-      ROS_INFO("Setting RotAccel from Dynamic Reconfigure: %d", value);
-      robot->setRotAccel(value);
-    }
+  value = config.rot_accel * 180/M_PI;
+  if(value != robot->getRotAccel() and value > 0)
+  {
+    ROS_INFO("Setting RotAccel from Dynamic Reconfigure: %d", value);
+    robot->setRotAccel(value);
+  }
       
-    value = config.rot_decel * 180/M_PI;
-    if(value != robot->getRotDecel() and value > 0)
-    {
-      ROS_INFO("Setting RotDecel from Dynamic Reconfigure: %d", value);
-      robot->setRotDecel(value);
-    }
+  value = config.rot_decel * 180/M_PI;
+  if(value != robot->getRotDecel() and value > 0)
+  {
+    ROS_INFO("Setting RotDecel from Dynamic Reconfigure: %d", value);
+    robot->setRotDecel(value);
   }
   robot->unlock();
 }
