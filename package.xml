@@ -2,9 +2,10 @@
   <name>rosaria</name>
   <version>0.9.0</version>
   <description>
-    <tt>ROSARIA</tt> provides a ROS interface for most Adept MobileRobots, 
+    The <tt>RosAria</tt> node provides a ROS interface for most Adept MobileRobots, 
     MobileRobots Inc., and ActivMedia mobile robot bases including
     Pioneer 2, Pioneer 3, AmigoBot, PeopleBot, PowerBot, PatrolBot, Seekur, Seekur Jr.,
+    Pioneer LX,
     and any other past, current or future robot base supported by Adept MobileRobot's 
     open source ARIA library. 
     Information from the robot base, and velocity and acceleration control, is implemented
@@ -17,8 +18,8 @@
 
   <license>GPLv2</license>
 
-  <url type="website">http://www.ros.org/wiki/ROSARIA</url>
-  <url type="bugtracker">https://code.google.com/p/amor-ros-pkg/issues/list</url> 
+  <url>http://wiki.ros.org/ROSARIA</url>
+  <url type="bugtracker">https://github.com/amor-ros-pkg/rosaria/issues</url>
 
   <author>Srećko Jurić-Kavelj</author>
 
