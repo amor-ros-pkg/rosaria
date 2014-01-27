@@ -31,10 +31,22 @@
 #include <sstream>
 
 
-// Node that interfaces between ROS and mobile robot base features via ARIA library. 
-//
-// RosAria uses the roscpp client library, see http://www.ros.org/wiki/roscpp for
-// information, tutorials and documentation.
+/** @brief Node that interfaces between ROS and mobile robot base features via ARIA library. 
+
+    RosAriaNode will use ARIA to connect to a robot controller (configure via
+    ~port parameter), either direct serial connection or over the network.  It 
+    runs ARIA's robot communications cycle in a background thread, and
+    as part of that cycle (a sensor interpretation task which calls RosAriaNode::publish()),
+    it  publishes various topics with newly received robot
+    data.  It also sends velocity commands to the robot when received in the
+    cmd_vel topic, and handles dynamic_reconfigure and Service requests.
+
+    For more information about ARIA see
+    http://robots.mobilerobots.com/wiki/Aria.
+
+    RosAria uses the roscpp client library, see http://www.ros.org/wiki/roscpp for
+    information, tutorials and documentation.
+*/
 class RosAriaNode
 {
   public:
@@ -113,7 +125,7 @@ class RosAriaNode
     bool debug_aria;
     std::string aria_log_filename;
     
-    // Robot Calibration Parameters
+    // Robot Calibration Parameters (see readParameters() function)
     int TicksMM, DriftFactor, RevCount;  //If TicksMM or RevCount are <0, don't use. If DriftFactor is -99999, don't use (DriftFactor could be 0 or negative).
     
     // dynamic_reconfigure
@@ -250,6 +262,7 @@ void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t
   robot->unlock();
 }
 
+/// Called when another node subscribes or unsubscribes from sonar topic.
 void RosAriaNode::sonarConnectCb()
 {
   publish_sonar = (sonar_pub.getNumSubscribers() > 0);
