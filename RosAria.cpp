@@ -24,10 +24,22 @@
 #include <sstream>
 
 
-// Node that interfaces between ROS and mobile robot base features via ARIA library. 
-//
-// RosAria uses the roscpp client library, see http://www.ros.org/wiki/roscpp for
-// information, tutorials and documentation.
+/** @brief Node that interfaces between ROS and mobile robot base features via ARIA library. 
+
+    RosAriaNode will use ARIA to connect to a robot controller (configure via
+    ~port parameter), either direct serial connection or over the network.  It 
+    runs ARIA's robot communications cycle in a background thread, and
+    as part of that cycle (a sensor interpretation task which calls RosAriaNode::publish()),
+    it  publishes various topics with newly received robot
+    data.  It also sends velocity commands to the robot when received in the
+    cmd_vel topic, and handles dynamic_reconfigure and Service requests.
+
+    For more information about ARIA see
+    http://robots.mobilerobots.com/wiki/Aria.
+
+    RosAria uses the roscpp client library, see http://www.ros.org/wiki/roscpp for
+    information, tutorials and documentation.
+*/
 class RosAriaNode
 {
   public:
@@ -92,14 +104,14 @@ class RosAriaNode
     std::string frame_id_sonar;
 
     //Sonar support
-    bool use_sonar;  // enable and publish sonars
+    bool use_sonar;  ///< enable and publish sonars if true
 
     // Debug Aria
     bool debug_aria;
     std::string aria_log_filename;
     
-    // Robot Parameters
-    int TicksMM, DriftFactor, RevCount;  // Odometry Calibration Settings
+    /// Odometry Calibration Settings (see readParameters())
+    int TicksMM, DriftFactor, RevCount;  
     
     // dynamic_reconfigure
     dynamic_reconfigure::Server<rosaria::RosAriaConfig> dynamic_reconfigure_server;
@@ -219,6 +231,7 @@ void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t
   robot->unlock();
 }
 
+/// Called when another node subscribes or unsubscribes from sonar topic.
 void RosAriaNode::sonarConnectCb()
 {
   robot->lock();
@@ -242,7 +255,7 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   // read in config options
   n = nh;
 
-  // !!! port !!!
+  // port parameter
   n.param( "port", serial_port, std::string("/dev/ttyUSB0") );
   ROS_INFO( "RosAria: using port: [%s]", serial_port.c_str() );
 
