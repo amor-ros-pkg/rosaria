@@ -2,7 +2,7 @@
   <name>rosaria</name>
   <version>0.9.0</version>
   <description>
-    <tt>ROSARIA</tt> provides a ROS interface for most Adept MobileRobots, 
+    The <tt>RosAria</tt> node provides a ROS interface for most Adept MobileRobots, 
     MobileRobots Inc., and ActivMedia mobile robot bases including
     Pioneer 2, Pioneer 3, AmigoBot, PeopleBot, PowerBot, PatrolBot, Seekur,
     Seekur Jr., Pioneer LX,
