@@ -65,3 +65,16 @@ generate_messages(
 catkin_package(
     DEPENDS roscpp nav_msgs geometry_msgs sensor_msgs tf
 )
+
+#############
+## Install ##
+#############
+
+## Mark executables and/or libraries for installation
+install(
+  TARGETS 
+    RosAria
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
