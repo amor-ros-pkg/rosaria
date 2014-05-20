@@ -40,7 +40,7 @@ find_package(Boost REQUIRED COMPONENTS thread)
 include_directories(${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} )
 
 # The installation package provided by Adept doesn't follow Debian policies
-if(EXISTS "/usr/local/Aria/include/Aria.h")
+if(EXISTS "${ROOT}/usr/local/Aria/include/Aria.h")
   add_definitions(-DADEPT_PKG)
   include_directories( /usr/local/Aria/include)
   link_directories(/usr/local/Aria/lib)
