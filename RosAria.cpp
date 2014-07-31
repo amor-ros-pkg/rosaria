@@ -34,7 +34,7 @@
 class RosAriaNode
 {
   public:
-    RosAriaNode(ros::NodeHandle n);
+    RosAriaNode();
     virtual ~RosAriaNode();
     
   public:
@@ -50,6 +50,7 @@ class RosAriaNode
 
   protected:
     ros::NodeHandle n;
+    ros::NodeHandle private_nh;
     ros::Publisher pose_pub;
     ros::Publisher bumpers_pub;
     ros::Publisher sonar_pub;
@@ -112,43 +113,42 @@ void RosAriaNode::readParameters()
 {
   // Robot Parameters  
   robot->lock();
-  ros::NodeHandle n_("~");
-  if (n_.hasParam("TicksMM"))
+  if (private_nh.hasParam("TicksMM"))
   {
-    n_.getParam( "TicksMM", TicksMM);
+    private_nh.getParam( "TicksMM", TicksMM);
     ROS_INFO("Setting TicksMM from ROS Parameter: %d", TicksMM);
     robot->comInt(93, TicksMM);
   }
   else
   {
     TicksMM = robot->getOrigRobotConfig()->getTicksMM();
-    n_.setParam( "TicksMM", TicksMM);
+    private_nh.setParam( "TicksMM", TicksMM);
     ROS_INFO("Setting TicksMM from robot EEPROM: %d", TicksMM);
   }
   
-  if (n_.hasParam("DriftFactor"))
+  if (private_nh.hasParam("DriftFactor"))
   {
-    n_.getParam( "DriftFactor", DriftFactor);
+    private_nh.getParam( "DriftFactor", DriftFactor);
     ROS_INFO("Setting DriftFactor from ROS Parameter: %d", DriftFactor);
     robot->comInt(89, DriftFactor);
   }
   else
   {
     DriftFactor = robot->getOrigRobotConfig()->getDriftFactor();
-    n_.setParam( "DriftFactor", DriftFactor);
+    private_nh.setParam( "DriftFactor", DriftFactor);
     ROS_INFO("Setting DriftFactor from robot EEPROM: %d", DriftFactor);
   }
   
-  if (n_.hasParam("RevCount"))
+  if (private_nh.hasParam("RevCount"))
   {
-    n_.getParam( "RevCount", RevCount);
+    private_nh.getParam( "RevCount", RevCount);
     ROS_INFO("Setting RevCount from ROS Parameter: %d", RevCount);
     robot->comInt(88, RevCount);
   }
   else
   {
     RevCount = robot->getOrigRobotConfig()->getRevCount();
-    n_.setParam( "RevCount", RevCount);
+    private_nh.setParam( "RevCount", RevCount);
     ROS_INFO("Setting RevCount from robot EEPROM: %d", RevCount);
   }
   robot->unlock();
@@ -247,23 +247,21 @@ void RosAriaNode::sonarConnectCb()
   robot->unlock();
 }
 
-RosAriaNode::RosAriaNode(ros::NodeHandle nh) : 
-  myPublishCB(this, &RosAriaNode::publish), serial_port(""), serial_baud(0), use_sonar(false)
+RosAriaNode::RosAriaNode() : 
+  myPublishCB(this, &RosAriaNode::publish),private_nh("~"), n(), serial_port(""), serial_baud(0), use_sonar(false)
 {
-  // read in config options
-  n = nh;
 
   // !!! port !!!
-  n.param( "port", serial_port, std::string("/dev/ttyUSB0") );
+  private_nh.param( "port", serial_port, std::string("/dev/ttyUSB0") );
   ROS_INFO( "RosAria: using port: [%s]", serial_port.c_str() );
 
-  n.param("baud", serial_baud, 0);
+  private_nh.param("baud", serial_baud, 0);
   if(serial_baud != 0)
   ROS_INFO("RosAria: using serial port baud rate %d", serial_baud);
 
   // handle debugging more elegantly
-  n.param( "debug_aria", debug_aria, false ); // default not to debug
-  n.param( "aria_log_filename", aria_log_filename, std::string("Aria.log") );
+  private_nh.param( "debug_aria", debug_aria, false ); // default not to debug
+  private_nh.param( "aria_log_filename", aria_log_filename, std::string("Aria.log") );
 
   // Figure out what frame_id's to use. if a tf_prefix param is specified,
   // it will be added to the beginning of the frame_ids.
@@ -654,10 +652,9 @@ RosAriaNode::cmdvel_cb( const geometry_msgs::TwistConstPtr &msg)
 int main( int argc, char** argv )
 {
   ros::init(argc,argv, "RosAria");
-  ros::NodeHandle n(std::string("~"));
   Aria::init();
 
-  RosAriaNode *node = new RosAriaNode(n);
+  RosAriaNode *node = new RosAriaNode;
 
   if( node->Setup() != 0 )
   {
