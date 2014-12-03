@@ -55,7 +55,7 @@ class RosAriaNode
     ros::Publisher pose_pub;
     ros::Publisher bumpers_pub;
     ros::Publisher sonar_pub;
-    bool sonar_pointcloud2;
+    ros::Publisher sonar_pointcloud2_pub;
     ros::Publisher voltage_pub;
 
     ros::Publisher recharge_state_pub;
@@ -97,8 +97,12 @@ class RosAriaNode
     std::string frame_id_bumper;
     std::string frame_id_sonar;
 
-    //Sonar support
-    bool sonar_enabled;  // enable and publish sonar data. set to true when first subscriber connects, set to false when last subscriber disconnects.
+    // flag indicating whether sonar was enabled or disabled on the robot
+    bool sonar_enabled; 
+
+    // enable and publish sonar topics. set to true when first subscriber connects, set to false when last subscriber disconnects. 
+    bool publish_sonar; 
+    bool publish_sonar_pointcloud2;
 
     // Debug Aria
     bool debug_aria;
@@ -236,22 +240,25 @@ void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t
 
 void RosAriaNode::sonarConnectCb()
 {
+  publish_sonar = (sonar_pub.getNumSubscribers() > 0);
+  publish_sonar_pointcloud2 = (sonar_pointcloud2_pub.getNumSubscribers() > 0);
   robot->lock();
-  if (sonar_pub.getNumSubscribers() == 0)
-  {
-    robot->disableSonar();
-    sonar_enabled = false;
-  }
-  else
+  if (publish_sonar || publish_sonar_pointcloud2)
   {
     robot->enableSonar();
+    sonar_enabled = false;
+  }
+  else if(!publish_sonar && !publish_sonar_pointcloud2)
+  {
+    robot->disableSonar();
     sonar_enabled = true;
   }
   robot->unlock();
 }
 
 RosAriaNode::RosAriaNode(ros::NodeHandle nh) : 
-  myPublishCB(this, &RosAriaNode::publish), serial_port(""), serial_baud(0), sonar_enabled(false), sonar_pointcloud2(false)
+  myPublishCB(this, &RosAriaNode::publish), serial_port(""), serial_baud(0),
+  sonar_enabled(false), publish_sonar(false), publish_sonar_pointcloud2(false)
 {
   // read in runtime parameters
   n = nh;
@@ -267,9 +274,6 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   // handle debugging more elegantly
   n.param( "debug_aria", debug_aria, false ); // default not to debug
   n.param( "aria_log_filename", aria_log_filename, std::string("Aria.log") );
-
-  // sonar options
-  n.param("sonar_pointcloud2", sonar_pointcloud2, false);
 
   // Figure out what frame_id's to use. if a tf_prefix param is specified,
   // it will be added to the beginning of the frame_ids.
@@ -292,18 +296,12 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   // See ros::NodeHandle API docs.
   pose_pub = n.advertise<nav_msgs::Odometry>("pose",1000);
   bumpers_pub = n.advertise<rosaria::BumperState>("bumper_state",1000);
-  if(sonar_pointcloud2)
-  {
-    sonar_pub = n.advertise<sensor_msgs::PointCloud2>("sonar", 50, 
+  sonar_pub = n.advertise<sensor_msgs::PointCloud>("sonar", 50, 
       boost::bind(&RosAriaNode::sonarConnectCb, this),
       boost::bind(&RosAriaNode::sonarConnectCb, this));
-  }
-  else
-  {
-    sonar_pub = n.advertise<sensor_msgs::PointCloud>("sonar", 50,
+  sonar_pointcloud2_pub = n.advertise<sensor_msgs::PointCloud2>("sonar_pointcloud2", 50,
       boost::bind(&RosAriaNode::sonarConnectCb, this),
       boost::bind(&RosAriaNode::sonarConnectCb, this));
-  }
 
   voltage_pub = n.advertise<std_msgs::Float64>("battery_voltage", 1000);
   recharge_state_pub = n.advertise<std_msgs::Int8>("battery_recharge_state", 5, true /*latch*/ );
@@ -581,7 +579,8 @@ void RosAriaNode::publish()
   }
 
   // Publish sonar information, if enabled.
-  if (sonar_enabled) {
+  if (publish_sonar || publish_sonar_pointcloud2)
+  {
     sensor_msgs::PointCloud cloud;	//sonar readings.
     cloud.header.stamp = position.header.stamp;	//copy time.
     // sonar sensors relative to base_link
@@ -622,8 +621,9 @@ void RosAriaNode::publish()
     }
     ROS_DEBUG_STREAM(sonar_debug_info.str());
     
-    // publish data. convert to pointcloud2 first if requested.
-    if(sonar_pointcloud2)
+    // publish topic(s)
+
+    if(publish_sonar_pointcloud2)
     {
       sensor_msgs::PointCloud2 cloud2;
       if(!sensor_msgs::convertPointCloudToPointCloud2(cloud, cloud2))
@@ -632,10 +632,11 @@ void RosAriaNode::publish()
       }
       else
       {
-        sonar_pub.publish(cloud2);
+        sonar_pointcloud2_pub.publish(cloud2);
       }
     }
-    else
+
+    if(publish_sonar)
     {
       sonar_pub.publish(cloud);
     }
