@@ -10,6 +10,8 @@
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/PoseStamped.h"
 #include <sensor_msgs/PointCloud.h>  //for sonar data
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud_conversion.h> // can optionally publish sonar as new type pointcloud2
 #include "nav_msgs/Odometry.h"
 #include "rosaria/BumperState.h"
 #include "tf/tf.h"
@@ -53,6 +55,7 @@ class RosAriaNode
     ros::Publisher pose_pub;
     ros::Publisher bumpers_pub;
     ros::Publisher sonar_pub;
+    bool sonar_pointcloud2;
     ros::Publisher voltage_pub;
 
     ros::Publisher recharge_state_pub;
@@ -95,7 +98,7 @@ class RosAriaNode
     std::string frame_id_sonar;
 
     //Sonar support
-    bool use_sonar;  // enable and publish sonars
+    bool sonar_enabled;  // enable and publish sonar data. set to true when first subscriber connects, set to false when last subscriber disconnects.
 
     // Debug Aria
     bool debug_aria;
@@ -123,7 +126,7 @@ void RosAriaNode::readParameters()
   {
     TicksMM = robot->getOrigRobotConfig()->getTicksMM();
     n_.setParam( "TicksMM", TicksMM);
-    ROS_INFO("Setting TicksMM from robot EEPROM: %d", TicksMM);
+    ROS_INFO("Setting TicksMM from robot controller stored configuration: %d", TicksMM);
   }
   
   if (n_.hasParam("DriftFactor"))
@@ -136,7 +139,7 @@ void RosAriaNode::readParameters()
   {
     DriftFactor = robot->getOrigRobotConfig()->getDriftFactor();
     n_.setParam( "DriftFactor", DriftFactor);
-    ROS_INFO("Setting DriftFactor from robot EEPROM: %d", DriftFactor);
+    ROS_INFO("Setting DriftFactor from robot controller stored configuration: %d", DriftFactor);
   }
   
   if (n_.hasParam("RevCount"))
@@ -149,7 +152,7 @@ void RosAriaNode::readParameters()
   {
     RevCount = robot->getOrigRobotConfig()->getRevCount();
     n_.setParam( "RevCount", RevCount);
-    ROS_INFO("Setting RevCount from robot EEPROM: %d", RevCount);
+    ROS_INFO("Setting RevCount from robot controller stored configuration: %d", RevCount);
   }
   robot->unlock();
 }
@@ -237,23 +240,23 @@ void RosAriaNode::sonarConnectCb()
   if (sonar_pub.getNumSubscribers() == 0)
   {
     robot->disableSonar();
-    use_sonar = false;
+    sonar_enabled = false;
   }
   else
   {
     robot->enableSonar();
-    use_sonar = true;
+    sonar_enabled = true;
   }
   robot->unlock();
 }
 
 RosAriaNode::RosAriaNode(ros::NodeHandle nh) : 
-  myPublishCB(this, &RosAriaNode::publish), serial_port(""), serial_baud(0), use_sonar(false)
+  myPublishCB(this, &RosAriaNode::publish), serial_port(""), serial_baud(0), sonar_enabled(false), sonar_pointcloud2(false)
 {
-  // read in config options
+  // read in runtime parameters
   n = nh;
 
-  // !!! port !!!
+  // port and baud
   n.param( "port", serial_port, std::string("/dev/ttyUSB0") );
   ROS_INFO( "RosAria: using port: [%s]", serial_port.c_str() );
 
@@ -264,6 +267,9 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   // handle debugging more elegantly
   n.param( "debug_aria", debug_aria, false ); // default not to debug
   n.param( "aria_log_filename", aria_log_filename, std::string("Aria.log") );
+
+  // sonar options
+  n.param("sonar_pointcloud2", sonar_pointcloud2, false);
 
   // Figure out what frame_id's to use. if a tf_prefix param is specified,
   // it will be added to the beginning of the frame_ids.
@@ -286,9 +292,18 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   // See ros::NodeHandle API docs.
   pose_pub = n.advertise<nav_msgs::Odometry>("pose",1000);
   bumpers_pub = n.advertise<rosaria::BumperState>("bumper_state",1000);
-  sonar_pub = n.advertise<sensor_msgs::PointCloud>("sonar", 50,
-    boost::bind(&RosAriaNode::sonarConnectCb, this),
-    boost::bind(&RosAriaNode::sonarConnectCb, this));
+  if(sonar_pointcloud2)
+  {
+    sonar_pub = n.advertise<sensor_msgs::PointCloud2>("sonar", 50, 
+      boost::bind(&RosAriaNode::sonarConnectCb, this),
+      boost::bind(&RosAriaNode::sonarConnectCb, this));
+  }
+  else
+  {
+    sonar_pub = n.advertise<sensor_msgs::PointCloud>("sonar", 50,
+      boost::bind(&RosAriaNode::sonarConnectCb, this),
+      boost::bind(&RosAriaNode::sonarConnectCb, this));
+  }
 
   voltage_pub = n.advertise<std_msgs::Float64>("battery_voltage", 1000);
   recharge_state_pub = n.advertise<std_msgs::Int8>("battery_recharge_state", 5, true /*latch*/ );
@@ -566,16 +581,16 @@ void RosAriaNode::publish()
   }
 
   // Publish sonar information, if enabled.
-  if (use_sonar) {
+  if (sonar_enabled) {
     sensor_msgs::PointCloud cloud;	//sonar readings.
     cloud.header.stamp = position.header.stamp;	//copy time.
     // sonar sensors relative to base_link
     cloud.header.frame_id = frame_id_sonar;
-    
+  
 
-    // Log debugging info
-    std::stringstream sonar_debug_info;
+    std::stringstream sonar_debug_info; // Log debugging info
     sonar_debug_info << "Sonar readings: ";
+
     for (int i = 0; i < robot->getNumSonar(); i++) {
       ArSensorReading* reading = NULL;
       reading = robot->getSonarReading(i);
@@ -583,7 +598,7 @@ void RosAriaNode::publish()
         ROS_WARN("RosAria: Did not receive a sonar reading.");
         continue;
       }
-      
+    
       // getRange() will return an integer between 0 and 5000 (5m)
       sonar_debug_info << reading->getRange() << " ";
 
@@ -597,7 +612,7 @@ void RosAriaNode::publish()
       //                  << ", " << reading->getLocalY()
       //                  << ") from (" << sensor.getX() << ", " 
       //                  << sensor.getY() << ") ;; " ;
-      
+    
       //add sonar readings (robot-local coordinate frame) to cloud
       geometry_msgs::Point32 p;
       p.x = reading->getLocalX() / 1000.0;
@@ -607,9 +622,24 @@ void RosAriaNode::publish()
     }
     ROS_DEBUG_STREAM(sonar_debug_info.str());
     
-    sonar_pub.publish(cloud);
-  }
-
+    // publish data. convert to pointcloud2 first if requested.
+    if(sonar_pointcloud2)
+    {
+      sensor_msgs::PointCloud2 cloud2;
+      if(!sensor_msgs::convertPointCloudToPointCloud2(cloud, cloud2))
+      {
+        ROS_WARN("Error converting sonar point cloud message to point_cloud2 type before publishing! Not publishing this time.");
+      }
+      else
+      {
+        sonar_pub.publish(cloud2);
+      }
+    }
+    else
+    {
+      sonar_pub.publish(cloud);
+    }
+  } // end if sonar_enabled
 }
 
 bool RosAriaNode::enable_motors_cb(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
