@@ -29,6 +29,34 @@
 #include <sstream>
 
 
+const boost::array<double, 36ul> ODOM_POSE_COVARIANCE   = {{1e-3, 0, 0, 0, 0, 0, //Covariance while the robot is moving
+                                                            0, 1e-3, 0, 0, 0, 0,
+                                                            0, 0, 1e6, 0, 0, 0,
+                                                            0, 0, 0, 1e6, 0, 0,
+                                                            0, 0, 0, 0, 1e6, 0,
+                                                            0, 0, 0, 0, 0, 1e3}};
+
+const boost::array<double, 36ul> ODOM_POSE_COVARIANCE_NM= {{1e-9, 0, 0, 0, 0, 0,  //Covariance while the robot is not moving
+                                                            0, 1e-3, 0, 0, 0, 0,
+                                                            0, 0, 1e6, 0, 0, 0,
+                                                            0, 0, 0, 1e6, 0, 0,
+                                                            0, 0, 0, 0, 1e6, 0,
+                                                            0, 0, 0, 0, 0, 1e-9}};
+
+const boost::array<double, 36ul>  ODOM_TWIST_COVARIANCE = {{1e-3, 0, 0, 0, 0, 0,
+                                                            0, 1e-3, 0, 0, 0, 0,
+                                                            0, 0, 1e6, 0, 0, 0,
+                                                            0, 0, 0, 1e6, 0, 0,
+                                                            0, 0, 0, 0, 1e6, 0,
+                                                            0, 0, 0, 0, 0, 1e3}};
+const boost::array<double, 36ul> ODOM_TWIST_COVARIANCE_NM= {{1e-9, 0, 0, 0, 0, 0,
+                                                            0, 1e-3, 0, 0, 0, 0,
+                                                            0, 0, 1e6, 0, 0, 0,
+                                                            0, 0, 0, 1e6, 0, 0,
+                                                            0, 0, 0, 0, 1e6, 0,
+                                                            0, 0, 0, 0, 0, 1e-9}};
+
+
 // Node that interfaces between ROS and mobile robot base features via ARIA library. 
 //
 // RosAria uses the roscpp client library, see http://www.ros.org/wiki/roscpp for
@@ -39,6 +67,8 @@ class RosAriaNode
     RosAriaNode(ros::NodeHandle n);
     virtual ~RosAriaNode();
     
+
+
   public:
     int Setup();
     void cmdvel_cb( const geometry_msgs::TwistConstPtr &);
@@ -492,6 +522,20 @@ void RosAriaNode::publish()
   position.header.frame_id = frame_id_odom;
   position.child_frame_id = frame_id_base_link;
   position.header.stamp = ros::Time::now();
+
+  if(position.twist.twist.linear.x == 0 && 
+    position.twist.twist.linear.y == 0 && 
+    position.twist.twist.angular.z ==0 )
+  {
+    position.pose.covariance = ODOM_POSE_COVARIANCE_NM;
+    position.twist.covariance = ODOM_TWIST_COVARIANCE_NM;
+  }
+  else
+  {
+    position.pose.covariance = ODOM_POSE_COVARIANCE;
+    position.twist.covariance = ODOM_TWIST_COVARIANCE;
+  }
+
   pose_pub.publish(position);
 
   ROS_DEBUG("RosAria: publish: (time %f) pose x: %f, y: %f, angle: %f; linear vel x: %f, y: %f; angular vel z: %f", 
