@@ -11,6 +11,7 @@
 #include "geometry_msgs/PoseStamped.h"
 #include <sensor_msgs/PointCloud.h>  //for sonar data
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/Range.h>
 #include <sensor_msgs/point_cloud_conversion.h> // can optionally publish sonar as new type pointcloud2
 #include "nav_msgs/Odometry.h"
 #include "rosaria/BumperState.h"
@@ -27,6 +28,7 @@
 #include "std_srvs/Empty.h"
 
 #include <sstream>
+#include <vector>
 
 
 // Node that interfaces between ROS and mobile robot base features via ARIA library. 
@@ -56,6 +58,7 @@ class RosAriaNode
     ros::Publisher bumpers_pub;
     ros::Publisher sonar_pub;
     ros::Publisher sonar_pointcloud2_pub;
+    std::vector<ros::Publisher> sonar_range_pubs;
     ros::Publisher voltage_pub;
 
     ros::Publisher recharge_state_pub;
@@ -103,6 +106,7 @@ class RosAriaNode
     // enable and publish sonar topics. set to true when first subscriber connects, set to false when last subscriber disconnects. 
     bool publish_sonar; 
     bool publish_sonar_pointcloud2;
+    bool publish_sonar_range;
 
     // Debug Aria
     bool debug_aria;
@@ -242,16 +246,22 @@ void RosAriaNode::sonarConnectCb()
 {
   publish_sonar = (sonar_pub.getNumSubscribers() > 0);
   publish_sonar_pointcloud2 = (sonar_pointcloud2_pub.getNumSubscribers() > 0);
+  publish_sonar_range = false;
+  for(int i = 0; i < sonar_range_pubs.size(); i++)
+  {
+    if(sonar_range_pubs[i].getNumSubscribers() > 0)
+        publish_sonar_range = true;
+  }
   robot->lock();
-  if (publish_sonar || publish_sonar_pointcloud2)
+  if (publish_sonar || publish_sonar_pointcloud2 || publish_sonar_range)
   {
     robot->enableSonar();
-    sonar_enabled = false;
+    sonar_enabled = true;
   }
-  else if(!publish_sonar && !publish_sonar_pointcloud2)
+  else
   {
     robot->disableSonar();
-    sonar_enabled = true;
+    sonar_enabled = false;
   }
   robot->unlock();
 }
@@ -471,6 +481,15 @@ int RosAriaNode::Setup()
   // Run ArRobot background processing thread
   robot->runAsync(true);
 
+  for(int i = 0; i < robot->getNumSonar(); i++)
+  {
+      std::stringstream sonar_name;
+      sonar_name << "/sonar_range/sonar" << i;
+      sonar_range_pubs.push_back(n.advertise<sensor_msgs::Range>(sonar_name.str().c_str(), 50,
+          boost::bind(&RosAriaNode::sonarConnectCb, this),
+          boost::bind(&RosAriaNode::sonarConnectCb, this)));
+  }
+
   return 0;
 }
 
@@ -579,12 +598,15 @@ void RosAriaNode::publish()
   }
 
   // Publish sonar information, if enabled.
-  if (publish_sonar || publish_sonar_pointcloud2)
+  if (publish_sonar || publish_sonar_pointcloud2 || publish_sonar_range)
   {
     sensor_msgs::PointCloud cloud;	//sonar readings.
+    sensor_msgs::Range range;
     cloud.header.stamp = position.header.stamp;	//copy time.
+    range.header.stamp = position.header.stamp;
     // sonar sensors relative to base_link
     cloud.header.frame_id = frame_id_sonar;
+    range.header.frame_id = frame_id_sonar;
   
 
     std::stringstream sonar_debug_info; // Log debugging info
@@ -600,7 +622,11 @@ void RosAriaNode::publish()
     
       // getRange() will return an integer between 0 and 5000 (5m)
       sonar_debug_info << reading->getRange() << " ";
-
+      range.range = ((float) reading->getRange()) / 1000; // Range in meters
+      if(publish_sonar_range)
+      {
+        sonar_range_pubs[i].publish(range);
+      }
       // local (x,y). Appears to be from the centre of the robot, since values may
       // exceed 5000. This is good, since it means we only need 1 transform.
       // x & y seem to be swapped though, i.e. if the robot is driving north
@@ -640,6 +666,8 @@ void RosAriaNode::publish()
     {
       sonar_pub.publish(cloud);
     }
+
+
   } // end if sonar_enabled
 }
 
