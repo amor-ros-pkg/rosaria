@@ -39,7 +39,7 @@ generate_dynamic_reconfigure_options(cfg/RosAria.cfg)
 find_package(Boost REQUIRED COMPONENTS thread)
 include_directories(${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} )
 
-find_package(Aria REQUIRED)
+find_package(Aria QUIET)
 if(Aria_FOUND)
 	if(EXISTS "${Aria_INCLUDE_DIRS}/Aria.h")
 		add_definitions(-DADEPT_PKG)
