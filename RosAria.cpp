@@ -607,7 +607,9 @@ void RosAriaNode::publish()
     // sonar sensors relative to base_link
     cloud.header.frame_id = frame_id_sonar;
     range.header.frame_id = frame_id_sonar;
-  
+    range.radiation_type = sensor_msgs::Range::ULTRASOUND;
+    range.min_range = 0.0;
+    range.max_range = 5.0; //5m
 
     std::stringstream sonar_debug_info; // Log debugging info
     sonar_debug_info << "Sonar readings: ";
