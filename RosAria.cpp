@@ -24,6 +24,8 @@
 #include "std_msgs/Bool.h"
 #include "std_srvs/Empty.h"
 
+#include "LaserPublisher.h"
+
 #include <sstream>
 
 
@@ -78,6 +80,7 @@ class RosAriaNode
     int serial_baud;
 
     ArRobotConnector *conn;
+    ArLaserConnector *laserConnector;
     ArRobot *robot;
     nav_msgs::Odometry position;
     rosaria::BumperState bumpers;
@@ -107,6 +110,9 @@ class RosAriaNode
     
     // dynamic_reconfigure
     dynamic_reconfigure::Server<rosaria::RosAriaConfig> *dynamic_reconfigure_server;
+
+    // whether to publish aria lasers
+    bool publish_aria_lasers;
 };
 
 void RosAriaNode::readParameters()
@@ -254,10 +260,16 @@ void RosAriaNode::sonarConnectCb()
 }
 
 RosAriaNode::RosAriaNode() : 
-  myPublishCB(this, &RosAriaNode::publish),private_nh("~"), n(), serial_port(""), serial_baud(0), use_sonar(false)
+  private_nh("~"), n(), 
+  serial_port(""), serial_baud(0), 
+  conn(NULL), laserConnector(NULL), robot(NULL),
+  myPublishCB(this, &RosAriaNode::publish),
+  use_sonar(false), debug_aria(false), 
+  TicksMM(-1), DriftFactor(-1), RevCount(-1),
+  publish_aria_lasers(false)
 {
 
-  // !!! port !!!
+  // robot connection parameters
   private_nh.param( "port", serial_port, std::string("/dev/ttyUSB0") );
   ROS_INFO( "RosAria: using port: [%s]", serial_port.c_str() );
 
@@ -268,6 +280,9 @@ RosAriaNode::RosAriaNode() :
   // handle debugging more elegantly
   private_nh.param( "debug_aria", debug_aria, false ); // default not to debug
   private_nh.param( "aria_log_filename", aria_log_filename, std::string("Aria.log") );
+
+  // whether to connect to lasers using aria
+  private_nh.param("publish_aria_lasers", publish_aria_lasers, false);
 
   // Figure out what frame_id's to use. if a tf_prefix param is specified,
   // it will be added to the beginning of the frame_ids.
@@ -302,10 +317,6 @@ RosAriaNode::RosAriaNode() :
   motors_state_pub = n.advertise<std_msgs::Bool>("motors_state", 5, true /*latch*/ );
   motors_state.data = false;
   published_motors_state = false;
-  
-  // subscribe to services
-  cmdvel_sub = n.subscribe( "cmd_vel", 1, (boost::function <void(const geometry_msgs::TwistConstPtr&)>)
-    boost::bind(&RosAriaNode::cmdvel_cb, this, _1 ));
 
   // advertise enable/disable services
   enable_srv = n.advertiseService("enable_motors", &RosAriaNode::enable_motors_cb, this);
@@ -381,6 +392,9 @@ int RosAriaNode::Setup()
     return 1;
   }
 
+  if(publish_aria_lasers)
+    laserConnector = new ArLaserConnector(argparser, robot, conn);
+
   // causes ARIA to load various robot-specific hardware parameters from the robot parameter file in /usr/local/Aria/params
   if(!Aria::parseArgs())
   {
@@ -446,6 +460,7 @@ int RosAriaNode::Setup()
   
   dynamic_reconfigure_server->setCallback(boost::bind(&RosAriaNode::dynamic_reconfigureCB, this, _1, _2));
 
+
   // Enable the motors
   robot->enableMotors();
 
@@ -462,6 +477,39 @@ int RosAriaNode::Setup()
   // Run ArRobot background processing thread
   robot->runAsync(true);
 
+  // connect to lasers and create publishers
+  if(publish_aria_lasers)
+  {
+    ROS_INFO_NAMED("rosaria", "rosaria: Connecting to laser(s) configured in ARIA parameter file(s)...");
+    if (!laserConnector->connectLasers())
+    {
+      ROS_FATAL_NAMED("rosaria", "rosaria: Error connecting to laser(s)...");
+      return 1;
+    }
+
+    robot->lock();
+    const std::map<int, ArLaser*> *lasers = robot->getLaserMap();
+    ROS_INFO_NAMED("rosaria", "rosaria: there are %lu connected lasers", lasers->size());
+    for(std::map<int, ArLaser*>::const_iterator i = lasers->begin(); i != lasers->end(); ++i)
+    {
+      ArLaser *l = i->second;
+      int ln = i->first;
+      std::string tfname("laser");
+      if(lasers->size() > 1 || ln > 1) // no number if only one laser which is also laser 1
+        tfname += ln; 
+      tfname += "_frame";
+      ROS_INFO_NAMED("rosaria", "rosaria: Creating publisher for laser #%d named %s with tf frame name %s", ln, l->getName(), tfname.c_str());
+      new LaserPublisher(l, n, true, tfname);
+    }
+    robot->unlock();
+    ROS_INFO_NAMED("rosaria", "rosaria: Done creating laser publishers");
+  }
+    
+  // subscribe to command topics
+  cmdvel_sub = n.subscribe( "cmd_vel", 1, (boost::function <void(const geometry_msgs::TwistConstPtr&)>)
+      boost::bind(&RosAriaNode::cmdvel_cb, this, _1 ));
+
+  ROS_INFO_NAMED("rosaria", "rosaria: Setup complete");
   return 0;
 }
 

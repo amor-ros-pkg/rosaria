@@ -55,7 +55,7 @@ else()
 	endif()
 endif()
 
-add_executable(RosAria RosAria.cpp)
+add_executable(RosAria RosAria.cpp LaserPublisher.cpp)
 add_dependencies(RosAria rosaria_gencfg)
 add_dependencies(RosAria rosaria_gencpp)
 
