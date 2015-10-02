@@ -66,7 +66,7 @@ LaserPublisher::~LaserPublisher()
 
 void LaserPublisher::readingsCB()
 {
-  printf("readingsCB(): %lu ms since last readingsCB() call.\n", readingsCallbackTime->mSecSince());
+  //printf("readingsCB(): %lu ms since last readingsCB() call.\n", readingsCallbackTime->mSecSince());
   assert(laser);
   laser->lockDevice();
   publishLaserScan();
@@ -74,7 +74,7 @@ void LaserPublisher::readingsCB()
   laser->unlockDevice();
   if(broadcast_tf)
     transform_broadcaster.sendTransform(tf::StampedTransform(lasertf, convertArTimeToROS(laser->getLastReadingTime()), parenttfname, tfname));
-  readingsCallbackTime->setToNow();
+  //readingsCallbackTime->setToNow();
 }
 
 void LaserPublisher::publishLaserScan()
