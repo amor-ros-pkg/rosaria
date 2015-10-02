@@ -6,6 +6,9 @@
 #include <sensor_msgs/PointCloud.h>
 #include <tf/transform_broadcaster.h>
 
+class ArLaser;
+class ArTime;
+
 class LaserPublisher
 {
 public:
@@ -28,6 +31,8 @@ protected:
   tf::Transform lasertf;
   tf::TransformBroadcaster transform_broadcaster;
   bool broadcast_tf;
+
+  ArTime *readingsCallbackTime;
 };
 
 #endif

@@ -52,6 +52,8 @@ LaserPublisher::LaserPublisher(ArLaser *_l, ros::NodeHandle& _n, bool _broadcast
   laserscan.range_min = 0; //laser->getMinRange() / 1000.0;
   laserscan.range_max = laser->getMaxRange() / 1000.0;
   pointcloud.header.frame_id = globaltfname;
+
+  readingsCallbackTime = new ArTime;
 }
 
 LaserPublisher::~LaserPublisher()
@@ -59,10 +61,12 @@ LaserPublisher::~LaserPublisher()
   laser->lockDevice();
   laser->remReadingCB(&laserReadingsCB);
   laser->unlockDevice();
+  delete readingsCallbackTime;
 }
 
 void LaserPublisher::readingsCB()
 {
+  printf("readingsCB(): %lu ms since last readingsCB() call.\n", readingsCallbackTime->mSecSince());
   assert(laser);
   laser->lockDevice();
   publishLaserScan();
@@ -70,6 +74,7 @@ void LaserPublisher::readingsCB()
   laser->unlockDevice();
   if(broadcast_tf)
     transform_broadcaster.sendTransform(tf::StampedTransform(lasertf, convertArTimeToROS(laser->getLastReadingTime()), parenttfname, tfname));
+  readingsCallbackTime->setToNow();
 }
 
 void LaserPublisher::publishLaserScan()
