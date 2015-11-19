@@ -9,10 +9,9 @@
 #include "ArTimeToROSTime.h"
 
 
-// TODO publish transform for sensor position?
 // TODO publish pointcloud of cumulative readings in separate topic?
 // TODO generic pointcloud sensor publisher (seprate point cloud stuff there)
-// TODO sonar publisher? (take from rosaria)
+// TODO make  similar sonar publisher?
 
 LaserPublisher::LaserPublisher(ArLaser *_l, ros::NodeHandle& _n, bool _broadcast_tf, const std::string& _tf_frame, const std::string& _parent_tf_frame, const std::string& _global_tf_frame) :
   laserReadingsCB(this, &LaserPublisher::readingsCB),
@@ -37,8 +36,8 @@ LaserPublisher::LaserPublisher(ArLaser *_l, ros::NodeHandle& _n, bool _broadcast
   tf::Quaternion q;
   if(laser->hasSensorPosition())
   {
-    lasertf.setOrigin(tf::Vector3(laser->getSensorPositionX(), laser->getSensorPositionY(), laser->getSensorPositionZ()));
-    q.setRPY(0, 0, laser->getSensorPositionTh());
+    lasertf.setOrigin(tf::Vector3(laser->getSensorPositionX()/1000.0, laser->getSensorPositionY()/1000.0, laser->getSensorPositionZ()/1000.0));
+    q.setRPY(0, 0, ArUtil::degToRad(laser->getSensorPositionTh()));
   }
   else
   {
