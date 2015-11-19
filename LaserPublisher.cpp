@@ -37,7 +37,7 @@ LaserPublisher::LaserPublisher(ArLaser *_l, ros::NodeHandle& _n, bool _broadcast
   if(laser->hasSensorPosition())
   {
     lasertf.setOrigin(tf::Vector3(laser->getSensorPositionX()/1000.0, laser->getSensorPositionY()/1000.0, laser->getSensorPositionZ()/1000.0));
-    q.setRPY(0, 0, ArUtil::degToRad(laser->getSensorPositionTh()));
+    q.setRPY(0, 0, ArMath::degToRad(laser->getSensorPositionTh()));
   }
   else
   {
