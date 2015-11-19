@@ -3,7 +3,12 @@
 #define ARTIMETOROSTIMESTAMP_H
 
 #include <ros/ros.h>
+
+#ifdef ADEPT_PKG
 #include "ariaUtil.h"
+#else
+#include "Aria/ariaUtil.h"
+#endif
 
 ros::Time convertArTimeToROS(const ArTime& t)
 {

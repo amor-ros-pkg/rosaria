@@ -1,7 +1,11 @@
 
-#include "Aria.h"
-#include "LaserPublisher.h"
+#ifdef ADEPT_PKG
+  #include <Aria.h>
+#else
+  #include <Aria/Aria.h>
+#endif
 
+#include "LaserPublisher.h"
 #include "ArTimeToROSTime.h"
 
 
