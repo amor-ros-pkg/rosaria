@@ -12,7 +12,7 @@ class ArTime;
 class LaserPublisher
 {
 public:
-  LaserPublisher(ArLaser* _l, ros::NodeHandle& _n, bool _broadcast_transform = true, const std::string& _tf_frame = "laser_frame", const std::string& _parent_tf_frame = "base_link", const std::string& _global_tf_frame = "map");
+  LaserPublisher(ArLaser* _l, ros::NodeHandle& _n, bool _broadcast_transform = true, const std::string& _tf_frame = "laser", const std::string& _parent_tf_frame = "base_link", const std::string& _global_tf_frame = "odom");
   ~LaserPublisher();
 protected:
   void readingsCB();
