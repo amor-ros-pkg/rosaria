@@ -99,14 +99,24 @@ void LaserPublisher::publishLaserScan()
   //printf("laserscan: %lu readings\n", readings->size());
   laserscan.ranges.resize(readings->size());
   size_t n = 0;
-  for(std::list<ArSensorReading*>::const_iterator r = readings->begin(); r != readings->end(); ++r)
-  {
-    assert(*r);
-    //printf("range %dmm extra %d\n", (*r)->getRange(), (*r)->getExtraInt());
-    laserscan.ranges[n] = (*r)->getRange() / 1000.0;
-    //laserscan.intensities[n] = (*r)->getExtraInt();
-    ++n;
+  if (laser->getFlipped()) {
+    // Reverse the data
+    for(std::list<ArSensorReading*>::const_reverse_iterator r = readings->rbegin(); r != readings->rend(); ++r)
+    {
+      assert(*r);
+      laserscan.ranges[n] = (*r)->getRange() / 1000.0;
+      ++n;
+    }
   }
+  else {
+    for(std::list<ArSensorReading*>::const_iterator r = readings->begin(); r != readings->end(); ++r)
+    {
+      assert(*r);
+      laserscan.ranges[n] = (*r)->getRange() / 1000.0;
+      ++n;
+    }
+  }
+
   laserscan_pub.publish(laserscan);
 }
 
