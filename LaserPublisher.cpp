@@ -8,6 +8,7 @@
 #include "LaserPublisher.h"
 #include "ArTimeToROSTime.h"
 
+#include <math.h>
 
 // TODO publish pointcloud of cumulative readings in separate topic?
 // TODO generic pointcloud sensor publisher (seprate point cloud stuff there)
@@ -50,11 +51,21 @@ LaserPublisher::LaserPublisher(ArLaser *_l, ros::NodeHandle& _n, bool _broadcast
   laserscan.header.frame_id = "laser_frame";
   laserscan.angle_min = ArMath::degToRad(laser->getStartDegrees());
   laserscan.angle_max = ArMath::degToRad(laser->getEndDegrees());
-  laserscan.angle_increment = ArMath::degToRad(laser->getIncrement());
   //laserscan.time_increment = ?
   laserscan.range_min = 0; //laser->getMinRange() / 1000.0;
   laserscan.range_max = laser->getMaxRange() / 1000.0;
   pointcloud.header.frame_id = globaltfname;
+  
+  // Get angle_increment of the laser
+  laserscan.angle_increment = 0;
+  if(laser->canSetIncrement()) {
+    laserscan.angle_increment = laser->getIncrement();
+  }
+  else if(laser->getIncrementChoice() != NULL) {
+    laserscan.angle_increment = laser->getIncrementChoiceDouble();
+  }
+  assert(laserscan.angle_increment > 0);
+  laserscan.angle_increment *= M_PI/180.0;
 
   readingsCallbackTime = new ArTime;
 }
