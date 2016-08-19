@@ -67,7 +67,7 @@ LaserPublisher::LaserPublisher(ArLaser *_l, ros::NodeHandle& _n, bool _broadcast
   assert(laserscan.angle_increment > 0);
   laserscan.angle_increment *= M_PI/180.0;
 
-  readingsCallbackTime = new ArTime;
+  //readingsCallbackTime = new ArTime;
 }
 
 LaserPublisher::~LaserPublisher()
@@ -75,7 +75,7 @@ LaserPublisher::~LaserPublisher()
   laser->lockDevice();
   laser->remReadingCB(&laserReadingsCB);
   laser->unlockDevice();
-  delete readingsCallbackTime;
+  //delete readingsCallbackTime;
 }
 
 void LaserPublisher::readingsCB()

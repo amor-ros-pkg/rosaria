@@ -32,7 +32,7 @@ protected:
   tf::TransformBroadcaster transform_broadcaster;
   bool broadcast_tf;
 
-  ArTime *readingsCallbackTime;
+  //ArTime *readingsCallbackTime;
 };
 
 #endif
