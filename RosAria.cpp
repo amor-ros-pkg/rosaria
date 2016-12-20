@@ -93,8 +93,7 @@ class RosAriaNode
     //for odom->base_link transform
     tf::TransformBroadcaster odom_broadcaster;
     geometry_msgs::TransformStamped odom_trans;
-    //for resolving tf names.
-    std::string tf_prefix;
+    
     std::string frame_id_odom;
     std::string frame_id_base_link;
     std::string frame_id_bumper;
@@ -289,19 +288,11 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
   // whether to connect to lasers using aria
   n.param("publish_aria_lasers", publish_aria_lasers, false);
 
-  // Figure out what frame_id's to use. if a tf_prefix param is specified,
-  // it will be added to the beginning of the frame_ids.
-  //
-  // e.g. rosrun ... _tf_prefix:=MyRobot (or equivalently using <param>s in
-  // roslaunch files)
-  // will result in the frame_ids being set to /MyRobot/odom etc,
-  // rather than /odom. This is useful for Multi Robot Systems.
-  // See ROS Wiki for further details.
-  tf_prefix = tf::getPrefixParam(n);
-  frame_id_odom = tf::resolve(tf_prefix, "odom");
-  frame_id_base_link = tf::resolve(tf_prefix, "base_link");
-  frame_id_bumper = tf::resolve(tf_prefix, "bumpers_frame");
-  frame_id_sonar = tf::resolve(tf_prefix, "sonar_frame");
+  // Get frame_ids to use.
+  n.param("odom_frame", frame_id_odom, std::string("odom"));
+  n.param("base_link_frame", frame_id_base_link, std::string("base_link"));
+  n.param("bumpers_frame", frame_id_bumper, std::string("bumpers"));
+  n.param("sonar_frame", frame_id_sonar, std::string("sonar"));
 
   // advertise services for data topics
   // second argument to advertise() is queue size.
