@@ -44,6 +44,7 @@ class RosAriaNode
   public:
     int Setup();
     void cmdvel_cb( const geometry_msgs::TwistConstPtr &);
+    void cmdvel_watchdog(const ros::TimerEvent& event);
     //void cmd_enable_motors_cb();
     //void cmd_disable_motors_cb();
     void spin();
@@ -77,6 +78,8 @@ class RosAriaNode
     bool disable_motors_cb(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
     ros::Time veltime;
+    ros::Timer cmdvel_watchdog_timer;
+    ros::Duration cmdvel_timeout;
 
     std::string serial_port;
     int serial_baud;
@@ -508,6 +511,12 @@ int RosAriaNode::Setup()
   cmdvel_sub = n.subscribe( "cmd_vel", 1, (boost::function <void(const geometry_msgs::TwistConstPtr&)>)
       boost::bind(&RosAriaNode::cmdvel_cb, this, _1 ));
 
+  // register a watchdog for cmd_vel timeout
+  double cmdvel_timeout_param = n.param("cmd_vel_timeout", 0.6);
+  cmdvel_timeout = ros::Duration(cmdvel_timeout_param);
+  if (cmdvel_timeout_param > 0.0)
+    cmdvel_watchdog_timer = n.createTimer(ros::Duration(0.1), &RosAriaNode::cmdvel_watchdog, this);
+
   ROS_INFO_NAMED("rosaria", "rosaria: Setup complete");
   return 0;
 }
@@ -717,6 +726,20 @@ RosAriaNode::cmdvel_cb( const geometry_msgs::TwistConstPtr &msg)
   robot->unlock();
   ROS_DEBUG("RosAria: sent vels to to aria (time %f): x vel %f mm/s, y vel %f mm/s, ang vel %f deg/s", veltime.toSec(),
     (double) msg->linear.x * 1e3, (double) msg->linear.y * 1.3, (double) msg->angular.z * 180/M_PI);
+}
+
+void RosAriaNode::cmdvel_watchdog(const ros::TimerEvent& event)
+{
+  // stop robot if no cmd_vel message was received for 0.6 seconds
+  if (ros::Time::now() - veltime > ros::Duration(0.6))
+  {
+    robot->lock();
+    robot->setVel(0.0);
+    if(robot->hasLatVel())
+      robot->setLatVel(0.0);
+    robot->setRotVel(0.0);
+    robot->unlock();
+  }
 }
 
 
