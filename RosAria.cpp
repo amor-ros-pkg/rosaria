@@ -138,9 +138,7 @@ class RosAriaNode
 void RosAriaNode::readParameters()
 {
   // Robot Parameters. If a parameter was given and is nonzero, set it now.
-  // Otherwise, get default value for this robot (from getOrigRobotConfig()),
-  // reset it on the robot (in case a previous call to readParameters() changed
-  // it?), and set that parameter value.  
+  // Otherwise, get default value for this robot (from getOrigRobotConfig()).
   // Parameter values are stored in member variables for possible later use by the user with dynamic reconfigure.
   robot->lock();
   ros::NodeHandle n_("~");
@@ -152,9 +150,9 @@ void RosAriaNode::readParameters()
   else
   {
     TicksMM = robot->getOrigRobotConfig()->getTicksMM();
-    ROS_INFO("Setting TicksMM parameter from this robot controller's stored configuration: %d", TicksMM);
-    n_.setParam( "TicksMM", TicksMM);
-    robot->comInt(93, TicksMM); // not neccesary?
+    ROS_INFO("This robot's TicksMM parameter: %d", TicksMM);
+    //n_.setParam( "TicksMM", TicksMM);
+    //robot->comInt(93, TicksMM); // not neccesary?
   }
   
   if (n_.getParam("DriftFactor", DriftFactor) && DriftFactor != -99999)
@@ -165,9 +163,9 @@ void RosAriaNode::readParameters()
   else
   {
     DriftFactor = robot->getOrigRobotConfig()->getDriftFactor();
-    ROS_INFO("Setting DriftFactor parameter from this robot controller's stored configuration: %d", DriftFactor);
-    n_.setParam( "DriftFactor", DriftFactor);
-    robot->comInt(89, DriftFactor); // not neccesary?
+    ROS_INFO("This robot's DriftFactor parameter: %d", DriftFactor);
+    //n_.setParam( "DriftFactor", DriftFactor);
+    //robot->comInt(89, DriftFactor); // not neccesary?
   }
   
   if (n_.getParam("RevCount", RevCount) && RevCount > 0)
@@ -178,9 +176,9 @@ void RosAriaNode::readParameters()
   else
   {
     RevCount = robot->getOrigRobotConfig()->getRevCount();
-    ROS_INFO("Setting RevCount parameter from this robot controller's stored configuration: %d", RevCount);
-    n_.setParam( "RevCount", RevCount);
-    robot->comInt(88, RevCount); // not neccesary?
+    ROS_INFO("This robot's RevCount parameter: %d", RevCount);
+    //n_.setParam( "RevCount", RevCount);
+    //robot->comInt(88, RevCount); // not neccesary?
   }
   robot->unlock();
 }
