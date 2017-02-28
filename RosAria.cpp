@@ -152,7 +152,6 @@ void RosAriaNode::readParameters()
     TicksMM = robot->getOrigRobotConfig()->getTicksMM();
     ROS_INFO("This robot's TicksMM parameter: %d", TicksMM);
     //n_.setParam( "TicksMM", TicksMM);
-    //robot->comInt(93, TicksMM); // not neccesary?
   }
   
   if (n_.getParam("DriftFactor", DriftFactor) && DriftFactor != -99999)
@@ -165,7 +164,6 @@ void RosAriaNode::readParameters()
     DriftFactor = robot->getOrigRobotConfig()->getDriftFactor();
     ROS_INFO("This robot's DriftFactor parameter: %d", DriftFactor);
     //n_.setParam( "DriftFactor", DriftFactor);
-    //robot->comInt(89, DriftFactor); // not neccesary?
   }
   
   if (n_.getParam("RevCount", RevCount) && RevCount > 0)
@@ -178,7 +176,6 @@ void RosAriaNode::readParameters()
     RevCount = robot->getOrigRobotConfig()->getRevCount();
     ROS_INFO("This robot's RevCount parameter: %d", RevCount);
     //n_.setParam( "RevCount", RevCount);
-    //robot->comInt(88, RevCount); // not neccesary?
   }
   robot->unlock();
 }
