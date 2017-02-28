@@ -290,11 +290,11 @@ RosAriaNode::RosAriaNode(ros::NodeHandle nh) :
 
   // port and baud
   n.param( "port", serial_port, std::string("/dev/ttyUSB0") );
-  ROS_INFO( "RosAria: using port: [%s]", serial_port.c_str() );
+  ROS_INFO( "RosAria: set port: [%s]", serial_port.c_str() );
 
   n.param("baud", serial_baud, 0);
   if(serial_baud != 0)
-    ROS_INFO("RosAria: using serial port baud rate %d", serial_baud);
+    ROS_INFO("RosAria: set serial port baud rate %d", serial_baud);
 
   // handle debugging more elegantly
   n.param( "debug_aria", debug_aria, false ); // default not to debug
@@ -374,17 +374,13 @@ int RosAriaNode::Setup()
   }
   else
   {
-    args->add("-robotPort"); // pass robot's serial port to Aria
-    args->add(serial_port.c_str());
+    args->add("-robotPort %s", serial_port.c_str()); // pass robot's serial port to Aria
   }
 
   // if a baud rate was specified in baud parameter
   if(serial_baud != 0)
   {
-    args->add("-robotBaud");
-    char tmp[100];
-    snprintf(tmp, 100, "%d", serial_baud);
-    args->add(tmp);
+    args->add("-robotBaud %d", serial_baud);
   }
   
   if( debug_aria )
@@ -402,7 +398,7 @@ int RosAriaNode::Setup()
   // Connect to the robot
   conn = new ArRobotConnector(argparser, robot); // warning never freed
   if (!conn->connectRobot()) {
-    ROS_ERROR("RosAria: ARIA could not connect to robot! (Check ~port parameter is correct, and permissions on port device.)");
+    ROS_ERROR("RosAria: ARIA could not connect to robot! (Check ~port parameter is correct, and permissions on port device, or any errors reported above)");
     return 1;
   }
 
