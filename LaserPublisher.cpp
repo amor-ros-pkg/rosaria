@@ -108,7 +108,14 @@ void LaserPublisher::publishLaserScan()
     for(std::list<ArSensorReading*>::const_reverse_iterator r = readings->rbegin(); r != readings->rend(); ++r)
     {
       assert(*r);
-      laserscan.ranges[n] = (*r)->getRange() / 1000.0;
+      
+      if ((*r)->getIgnoreThisReading()) {
+	laserscan.ranges[n] = -1;
+      }
+      else {
+	laserscan.ranges[n] = (*r)->getRange() / 1000.0;
+      }
+      
       ++n;
     }
   }
@@ -116,7 +123,14 @@ void LaserPublisher::publishLaserScan()
     for(std::list<ArSensorReading*>::const_iterator r = readings->begin(); r != readings->end(); ++r)
     {
       assert(*r);
-      laserscan.ranges[n] = (*r)->getRange() / 1000.0;
+      
+      if ((*r)->getIgnoreThisReading()) {
+	laserscan.ranges[n] = -1;
+      }
+      else {
+	laserscan.ranges[n] = (*r)->getRange() / 1000.0;
+      }
+      
       ++n;
     }
   }
