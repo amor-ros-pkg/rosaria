@@ -514,7 +514,8 @@ int RosAriaNode::Setup()
       boost::bind(&RosAriaNode::cmdvel_cb, this, _1 ));
 
   // register a watchdog for cmd_vel timeout
-  double cmdvel_timeout_param = n.param("cmd_vel_timeout", 0.6);
+  double cmdvel_timeout_param = 0.6;
+  n.param("cmd_vel_timeout", cmdvel_timeout_param, 0.6);
   cmdvel_timeout = ros::Duration(cmdvel_timeout_param);
   if (cmdvel_timeout_param > 0.0)
     cmdvel_watchdog_timer = n.createTimer(ros::Duration(0.1), &RosAriaNode::cmdvel_watchdog, this);
