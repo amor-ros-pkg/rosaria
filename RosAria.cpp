@@ -727,7 +727,7 @@ RosAriaNode::cmdvel_cb( const geometry_msgs::TwistConstPtr &msg)
   robot->setRotVel(msg->angular.z*180/M_PI);
   robot->unlock();
   ROS_DEBUG("RosAria: sent vels to to aria (time %f): x vel %f mm/s, y vel %f mm/s, ang vel %f deg/s", veltime.toSec(),
-    (double) msg->linear.x * 1e3, (double) msg->linear.y * 1.3, (double) msg->angular.z * 180/M_PI);
+    (double) msg->linear.x * 1e3, (double) msg->linear.y * 1e3, (double) msg->angular.z * 180/M_PI);
 }
 
 void RosAriaNode::cmdvel_watchdog(const ros::TimerEvent& event)
