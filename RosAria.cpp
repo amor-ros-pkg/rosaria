@@ -224,6 +224,13 @@ void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t
     ROS_INFO("Setting TransDecel from Dynamic Reconfigure: %d", value);
     robot->setTransDecel(value);
   } 
+
+  value = config.trans_vel_max * 1000;
+  if(value != robot->getTransVelMax() && value > 0)
+  {
+    ROS_INFO("Setting TransVelMax from Dynamic Reconfigure: %d", value);
+    robot->setTransVelMax(value);
+  }
   
   value = config.lat_accel * 1000;
   if(value != robot->getLatAccel() && value > 0)
@@ -254,6 +261,13 @@ void RosAriaNode::dynamic_reconfigureCB(rosaria::RosAriaConfig &config, uint32_t
     ROS_INFO("Setting RotDecel from Dynamic Reconfigure: %d", value);
     robot->setRotDecel(value);
   } 
+
+  value = config.rot_vel_max * 180/M_PI;
+  if(value != robot->getRotVelMax() && value > 0)
+  {
+    ROS_INFO("Setting RotVelMax from Dynamic Reconfigure: %d", value);
+    robot->setRotVelMax(value);
+  }
   robot->unlock();
 }
 
@@ -451,10 +465,12 @@ int RosAriaNode::Setup()
   rosaria::RosAriaConfig dynConf_default;
   dynConf_default.trans_accel = robot->getTransAccel() / 1000;
   dynConf_default.trans_decel = robot->getTransDecel() / 1000;
+  dynConf_default.trans_vel_max = robot->getTransVelMax() / 1000;
   dynConf_default.lat_accel   = robot->getLatAccel() / 1000;
   dynConf_default.lat_decel   = robot->getLatDecel() / 1000;
   dynConf_default.rot_accel   = robot->getRotAccel() * M_PI/180;
   dynConf_default.rot_decel   = robot->getRotDecel() * M_PI/180;
+  dynConf_default.rot_vel_max   = robot->getRotVelMax() * M_PI/180;
 
   dynConf_default.TicksMM     = 0;
   dynConf_default.DriftFactor = -99999;
