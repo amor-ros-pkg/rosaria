@@ -2,8 +2,10 @@
 #include <math.h>
 #ifdef ADEPT_PKG
   #include <Aria.h>
+  #include <ArRobotConfigPacketReader.h> // todo remove after ArRobotConfig implemented in AriaCoda
 #else
   #include <Aria/Aria.h>
+  #include <Aria/ArRobotConfigPacketReader.h> // todo remove after ArRobotConfig implemented in AriaCoda
 #endif
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
