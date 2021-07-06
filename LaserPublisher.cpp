@@ -143,15 +143,13 @@ void LaserPublisher::publishPointCloud()
   assert(laser);
   pointcloud.header.stamp = convertArTimeToROS(laser->getLastReadingTime());
   assert(laser->getCurrentBuffer());
-  const std::list<ArPoseWithTime*> *p = laser->getCurrentRangeBuffer()->getBuffer();
-  assert(p);
-  pointcloud.points.resize(p->size());
+  const std::list<ArPoseWithTime> p = laser->getCurrentRangeBuffer().getBuffer();
+  pointcloud.points.resize(p.size());
   size_t n = 0;
-  for(std::list<ArPoseWithTime*>::const_iterator i = p->begin(); i != p->end(); ++i)
+  for(std::list<ArPoseWithTime>::const_iterator i = p.begin(); i != p.end(); ++i)
   {
-    assert(*i);
-    pointcloud.points[n].x = (*i)->getX() / 1000.0;
-    pointcloud.points[n].y = (*i)->getY() / 1000.0;
+    pointcloud.points[n].x = i->getX() / 1000.0;
+    pointcloud.points[n].y = i->getY() / 1000.0;
     pointcloud.points[n].z = (laser->hasSensorPosition() ?  laser->getSensorPositionZ() / 1000.0 : 0.0);
     ++n;
   }
