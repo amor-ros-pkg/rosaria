@@ -142,17 +142,38 @@ void LaserPublisher::publishPointCloud()
 {
   assert(laser);
   pointcloud.header.stamp = convertArTimeToROS(laser->getLastReadingTime());
-  assert(laser->getCurrentBuffer());
+#ifdef ARIACODA
   const std::list<ArPoseWithTime> p = laser->getCurrentRangeBuffer().getBuffer();
   pointcloud.points.resize(p.size());
   size_t n = 0;
-  for(std::list<ArPoseWithTime>::const_iterator i = p.begin(); i != p.end(); ++i)
+  for(auto i = p.cbegin(); i != p.cend(); ++i)
   {
     pointcloud.points[n].x = i->getX() / 1000.0;
     pointcloud.points[n].y = i->getY() / 1000.0;
     pointcloud.points[n].z = (laser->hasSensorPosition() ?  laser->getSensorPositionZ() / 1000.0 : 0.0);
+        // XXX TODO ^--- is this correct, or should laser position on robot be
+        // reflected in tf for laser (from URDF or from Aria params if not
+        // available?) and the height of sensor readings determined by ROS
+        // client using that?
     ++n;
   }
+#else
+  assert(laser->getCurrentRangeBuffer());
+  const std::list<ArPoseWithTime*>* p = laser->getCurrentRangeBuffer().getBuffer();
+  pointcloud.points.resize(p->size());
+  size_t n = 0;
+  for(auto i = p->cbegin(); i != p->cend(); ++i)
+  {
+    pointcloud.points[n].x = (*i)->getX() / 1000.0;
+    pointcloud.points[n].y = (*i)->getY() / 1000.0;
+    pointcloud.points[n].z = (laser->hasSensorPosition() ?  laser->getSensorPositionZ() / 1000.0 : 0.0);
+        // XXX TODO ^--- is this correct, or should laser position on robot be
+        // reflected in tf for laser (from URDF or from Aria params if not
+        // available?) and the height of sensor readings determined by ROS client
+        // using that?
+    ++n;
+  }
+#endif
   pointcloud_pub.publish(pointcloud);
 }
   
