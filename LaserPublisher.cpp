@@ -159,7 +159,7 @@ void LaserPublisher::publishPointCloud()
   }
 #else
   assert(laser->getCurrentRangeBuffer());
-  const std::list<ArPoseWithTime*>* p = laser->getCurrentRangeBuffer().getBuffer();
+  const std::list<ArPoseWithTime*>* p = laser->getCurrentRangeBuffer()->getBuffer();
   pointcloud.points.resize(p->size());
   size_t n = 0;
   for(auto i = p->cbegin(); i != p->cend(); ++i)
